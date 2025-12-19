@@ -1,0 +1,52 @@
+/* Default theme (ocean) */
+:root {
+  --bg: #020617;                       /* slate-950 */
+  --glow-rgb: 59,130,246;              /* blue */
+  --panel: rgba(255,255,255,0.05);
+  --panel-border: rgba(255,255,255,0.10);
+
+  --text: rgba(255,255,255,1);
+  --muted: rgba(255,255,255,0.70);
+
+  --input-bg: rgba(0,0,0,0.30);
+  --input-border: rgba(255,255,255,0.10);
+  --ring: rgba(59,130,246,0.60);
+
+  --primary: #2563eb;
+  --primary-hover: #3b82f6;
+  --primary-active: #1d4ed8;
+
+  --danger-border: rgba(239,68,68,0.30);
+  --danger-bg: rgba(239,68,68,0.10);
+  --danger-text: rgba(254,202,202,1);
+}
+
+/* Theme 1: Emerald */
+:root[data-theme="emerald"] {
+  --glow-rgb: 16,185,129;
+  --ring: rgba(16,185,129,0.55);
+
+  --primary: #059669;
+  --primary-hover: #10b981;
+  --primary-active: #047857;
+}
+
+/* Theme 2: Violet */
+:root[data-theme="violet"] {
+  --glow-rgb: 168,85,247;
+  --ring: rgba(168,85,247,0.55);
+
+  --primary: #7c3aed;
+  --primary-hover: #8b5cf6;
+  --primary-active: #6d28d9;
+}
+
+/* Theme 3: Amber */
+:root[data-theme="amber"] {
+  --glow-rgb: 245,158,11;
+  --ring: rgba(245,158,11,0.55);
+
+  --primary: #d97706;
+  --primary-hover: #f59e0b;
+  --primary-active: #b45309;
+}
