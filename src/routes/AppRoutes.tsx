@@ -3,7 +3,7 @@ import AuthPage from './../pages/auth/AuthPage.tsx';
 import TasksPage from './../pages/tasks/TasksPage.tsx';
 import RequireAuth from "./RequireAuth";
 import AppShell from "../components/layout/AppShell";
-
+import SettingsPage from './../pages/settings/SettingsPage.tsx';
 export default function AppRoutes() {
   return (
     <Routes>
@@ -14,6 +14,7 @@ export default function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           {/* add more protected pages here */}
         </Route>
       </Route>

@@ -15,7 +15,7 @@ export default function FullPageLoader({
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-white/10 border-t-[color:var(--primary)]" />
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-white/10 border-t-(--primary)" />
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <p className="mt-1 text-sm text-white/60">{subtitle}</p>
         </div>

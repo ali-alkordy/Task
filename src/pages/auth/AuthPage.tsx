@@ -55,12 +55,14 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, register } = useAuth();
-  const { theme, setTheme, isDark } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const safeTheme: ThemeName =
     theme && Object.prototype.hasOwnProperty.call(THEME_META, theme)
-      ? theme
+      ? (theme as ThemeName)
       : "ocean";
+
+  const isDark = safeTheme !== "light";
 
   const [mode, setMode] = useState<Mode>("login");
   const [serverError, setServerError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export default function AuthPage() {
     setSubmitting(true);
     try {
       await login(values.email, values.password);
-      toast.success("Signed in successfully ");
+      toast.success("Signed in successfully");
       navigate(redirectTo, { replace: true });
     } catch (err: unknown) {
       const msg = firebaseAuthErrorMessage(err);
@@ -106,7 +108,7 @@ export default function AuthPage() {
     setSubmitting(true);
     try {
       await register(values.email, values.password);
-      toast.success("Account created ");
+      toast.success("Account created");
       navigate(redirectTo, { replace: true });
     } catch (err: unknown) {
       const msg = firebaseAuthErrorMessage(err);
@@ -151,29 +153,33 @@ export default function AuthPage() {
   const panelClass =
     "rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur";
 
+  // ✅ placeholder now respects themes
   const inputBase =
-    "w-full rounded-xl border bg-[color:var(--input-bg)] px-4 py-3 text-[color:var(--text)] placeholder:text-white/30 outline-none";
+    "w-full rounded-xl border bg-[color:var(--input-bg)] px-4 py-3 text-[color:var(--text)] placeholder:text-[color:var(--muted)] outline-none";
 
   const inputFocus = "focus:ring-2 focus:ring-[color:var(--ring)]";
 
-  // Theme dropdown menu items
-  const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map(
-    (key) => ({
-      key,
-      onClick: () => setTheme(key),
-      label: (
-        <div className="flex items-center gap-2 px-1 py-0.5">
-          <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
-          <span className="text-[color:var(--text)]">{THEME_META[key].label}</span>
-          {safeTheme === key && (
-            <span className="ml-auto text-xs text-[color:var(--muted)]">Active</span>
-          )}
-        </div>
-      ),
-    })
+  // Theme menu items (no per-item onClick needed)
+  const themeItems: MenuProps["items"] = useMemo(
+    () =>
+      (Object.keys(THEME_META) as ThemeName[]).map((key) => ({
+        key,
+        label: (
+          <div className="flex items-center gap-2 px-1 py-0.5">
+            <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
+            <span className="text-(--text)">{THEME_META[key].label}</span>
+            {safeTheme === key && (
+              <span className="ml-auto text-xs text-(--muted)">Active</span>
+            )}
+          </div>
+        ),
+      })),
+    [safeTheme]
   );
 
-  const themeOverlay = cn(
+  const onThemeClick: MenuProps["onClick"] = ({ key }) => setTheme(key as ThemeName);
+
+  const themeOverlayRoot = cn(
     "theme-dropdown-overlay",
     "[&_.ant-dropdown-menu]:!min-w-[200px]",
     "[&_.ant-dropdown-menu]:!rounded-xl",
@@ -191,15 +197,32 @@ export default function AuthPage() {
       : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
   );
 
+  // ✅ theme-aware tabs background
+  const tabsWrap = cn(
+    "mb-6 grid grid-cols-2 rounded-xl border border-[color:var(--panel-border)] p-1",
+    "bg-[color:var(--panel)]"
+  );
+
+  const tabBtnBase = "rounded-lg px-3 py-2 text-sm font-semibold transition";
+
+  const tabBtnActive = cn(
+    "bg-[color:var(--panel-hover)] text-[color:var(--text)] shadow-[var(--shadow-sm)]"
+  );
+
+  const tabBtnInactive = cn(
+    "text-[color:var(--muted)] hover:text-[color:var(--text)]"
+  );
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[color:var(--bg)]">
+    <div className="relative min-h-screen overflow-hidden bg-(--bg)">
       {/* Theme Picker Circle (Top-Left) */}
       <div className="absolute left-4 top-4 z-20">
         <Dropdown
-          menu={{ items: themeItems }}
+          menu={{ items: themeItems, onClick: onThemeClick }}
           trigger={["click"]}
           placement="bottomLeft"
-          overlayClassName={themeOverlay}
+          // ✅ AntD v5 (no warning)
+          classNames={{ root: themeOverlayRoot }}
         >
           <button
             type="button"
@@ -207,14 +230,14 @@ export default function AuthPage() {
             title="Theme"
             className={cn(
               "group relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-all",
-              "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
-              "hover:bg-[color:var(--panel-hover)] active:scale-95"
+              "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)",
+              "hover:bg-(--panel-hover) active:scale-95"
             )}
           >
             {/* Active theme dot */}
             <span
               className={cn(
-                "absolute -right-1 -top-1 h-3 w-3 rounded-full border border-[color:var(--panel-border)]",
+                "absolute -right-1 -top-1 h-3 w-3 rounded-full border border-(--panel-border)",
                 THEME_META[safeTheme].dot
               )}
             />
@@ -229,30 +252,23 @@ export default function AuthPage() {
         <div className="w-full max-w-md">
           <div className={panelClass}>
             <div className="mb-5">
-              <h1 className="text-2xl font-semibold text-[color:var(--text)]">
+              <h1 className="text-2xl font-semibold text-(--text)">
                 Team Tasks
               </h1>
-              <p className="mt-1 text-sm text-[color:var(--muted)]">
-                {mode === "login"
-                  ? "Sign in to continue"
-                  : "Create your account to start"}
+              <p className="mt-1 text-sm text-(--muted)">
+                {mode === "login" ? "Sign in to continue" : "Create your account to start"}
               </p>
             </div>
 
             {/* Tabs */}
-            <div className="mb-6 grid grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-black/20 p-1">
+            <div className={tabsWrap}>
               <button
                 type="button"
                 onClick={() => {
                   setServerError(null);
                   setMode("login");
                 }}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-semibold transition",
-                  mode === "login"
-                    ? "bg-white/10 text-[color:var(--text)] shadow"
-                    : "text-[color:var(--muted)] hover:text-[color:var(--text)]"
-                )}
+                className={cn(tabBtnBase, mode === "login" ? tabBtnActive : tabBtnInactive)}
               >
                 Login
               </button>
@@ -263,12 +279,7 @@ export default function AuthPage() {
                   setServerError(null);
                   setMode("register");
                 }}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-semibold transition",
-                  mode === "register"
-                    ? "bg-white/10 text-[color:var(--text)] shadow"
-                    : "text-[color:var(--muted)] hover:text-[color:var(--text)]"
-                )}
+                className={cn(tabBtnBase, mode === "register" ? tabBtnActive : tabBtnInactive)}
               >
                 Register
               </button>
@@ -276,22 +287,15 @@ export default function AuthPage() {
 
             {/* Inline server error */}
             {serverError && (
-              <div className="mb-4 rounded-xl border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-4 py-3 text-sm text-[color:var(--danger-text)]">
+              <div className="mb-4 rounded-xl border border-(--danger-border) bg-(--danger-bg) px-4 py-3 text-sm text-(--danger-text)">
                 {serverError}
               </div>
             )}
 
             {/* LOGIN */}
             {mode === "login" && (
-              <form
-                noValidate
-                className="space-y-4"
-                onSubmit={loginForm.handleSubmit(onLogin)}
-              >
-                <Field
-                  label="Email"
-                  error={showLoginEmailError ? lf.errors.email?.message : undefined}
-                >
+              <form noValidate className="space-y-4" onSubmit={loginForm.handleSubmit(onLogin)}>
+                <Field label="Email" error={showLoginEmailError ? lf.errors.email?.message : undefined}>
                   <Controller
                     name="email"
                     control={loginForm.control}
@@ -305,9 +309,7 @@ export default function AuthPage() {
                         className={cn(
                           inputBase,
                           inputFocus,
-                          lf.errors.email
-                            ? "border-red-500/60"
-                            : "border-[color:var(--input-border)]",
+                          lf.errors.email ? "border-red-500/60" : "border-(--input-border)",
                           submitting && "cursor-not-allowed opacity-70"
                         )}
                       />
@@ -317,9 +319,7 @@ export default function AuthPage() {
 
                 <Field
                   label="Password"
-                  error={
-                    showLoginPasswordError ? lf.errors.password?.message : undefined
-                  }
+                  error={showLoginPasswordError ? lf.errors.password?.message : undefined}
                 >
                   <Controller
                     name="password"
@@ -344,7 +344,7 @@ export default function AuthPage() {
                   disabled={!lf.isValid || submitting}
                   className={cn(
                     "w-full rounded-xl px-4 py-3 font-semibold text-white transition",
-                    "bg-[color:var(--primary)] hover:bg-[color:var(--primary-hover)] active:bg-[color:var(--primary-active)]",
+                    "bg-(--primary) hover:bg-(--primary-hover) active:bg-(--primary-active)",
                     "disabled:cursor-not-allowed disabled:opacity-60",
                     submitting && "opacity-80"
                   )}
@@ -356,15 +356,8 @@ export default function AuthPage() {
 
             {/* REGISTER */}
             {mode === "register" && (
-              <form
-                noValidate
-                className="space-y-4"
-                onSubmit={registerForm.handleSubmit(onRegister)}
-              >
-                <Field
-                  label="Email"
-                  error={showRegEmailError ? rf.errors.email?.message : undefined}
-                >
+              <form noValidate className="space-y-4" onSubmit={registerForm.handleSubmit(onRegister)}>
+                <Field label="Email" error={showRegEmailError ? rf.errors.email?.message : undefined}>
                   <Controller
                     name="email"
                     control={registerForm.control}
@@ -378,9 +371,7 @@ export default function AuthPage() {
                         className={cn(
                           inputBase,
                           inputFocus,
-                          rf.errors.email
-                            ? "border-red-500/60"
-                            : "border-[color:var(--input-border)]",
+                          rf.errors.email ? "border-red-500/60" : "border-(--input-border)",
                           submitting && "cursor-not-allowed opacity-70"
                         )}
                       />
@@ -390,9 +381,7 @@ export default function AuthPage() {
 
                 <Field
                   label="Password"
-                  error={
-                    showRegPasswordError ? rf.errors.password?.message : undefined
-                  }
+                  error={showRegPasswordError ? rf.errors.password?.message : undefined}
                 >
                   <Controller
                     name="password"
@@ -414,11 +403,7 @@ export default function AuthPage() {
 
                 <Field
                   label="Confirm password"
-                  error={
-                    showRegConfirmError
-                      ? rf.errors.confirmPassword?.message
-                      : undefined
-                  }
+                  error={showRegConfirmError ? rf.errors.confirmPassword?.message : undefined}
                 >
                   <Controller
                     name="confirmPassword"
@@ -443,7 +428,7 @@ export default function AuthPage() {
                   disabled={!rf.isValid || submitting}
                   className={cn(
                     "w-full rounded-xl px-4 py-3 font-semibold text-white transition",
-                    "bg-[color:var(--primary)] hover:bg-[color:var(--primary-hover)] active:bg-[color:var(--primary-active)]",
+                    "bg-(--primary) hover:bg-(--primary-hover) active:bg-(--primary-active)",
                     "disabled:cursor-not-allowed disabled:opacity-60",
                     submitting && "opacity-80"
                   )}
@@ -472,11 +457,11 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-[color:var(--muted)]">
+      <label className="mb-1 block text-sm font-medium text-(--muted)">
         {label}
       </label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
+      {error && <p className="mt-1 text-xs text-(--danger-text)">{error}</p>}
     </div>
   );
 }

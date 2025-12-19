@@ -19,13 +19,16 @@ const THEME_META: Record<ThemeName, { label: string; dot: string }> = {
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { theme, setTheme, isDark } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   // Safe fallback for theme
   const safeTheme: ThemeName =
     theme && Object.prototype.hasOwnProperty.call(THEME_META, theme)
       ? theme
       : "ocean";
+
+  // derive dark mode flag from resolved theme
+  const isDark = safeTheme !== "light";
 
   const onLogout = async () => {
     await logout();
@@ -42,9 +45,9 @@ export default function Navbar() {
           <span
             className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)}
           />
-          <span className="text-[color:var(--text)]">{THEME_META[key].label}</span>
+          <span className="text-(--text)">{THEME_META[key].label}</span>
           {safeTheme === key && (
-            <span className="ml-auto text-xs text-[color:var(--muted)]">Active</span>
+            <span className="ml-auto text-xs text-(--muted)">Active</span>
           )}
         </div>
       ),
@@ -59,8 +62,8 @@ export default function Navbar() {
       disabled: true,
       label: (
         <div className="px-1 py-0.5">
-          <div className="text-xs text-[color:var(--muted)]">Signed in as</div>
-          <div className="text-sm font-medium text-[color:var(--text)]">
+          <div className="text-xs text-(--muted)">Signed in as</div>
+          <div className="text-sm font-medium text-(--text)">
             {user?.email || "—"}
           </div>
         </div>
@@ -72,7 +75,7 @@ export default function Navbar() {
       label: (
         <div className="flex items-center gap-2 px-1 py-0.5">
           <Settings size={16} />
-          <span className="text-[color:var(--text)]">Settings</span>
+          <span className="text-(--text)">Settings</span>
         </div>
       ),
       onClick: () => navigate("/settings"), 
@@ -118,17 +121,17 @@ const dropdownOverlayClass = cn(
 
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[color:var(--panel-border)] bg-[color:var(--bg)]/95 backdrop-blur-sm shadow-[var(--shadow-sm)]">
+    <header className="sticky top-0 z-50 border-b border-(--panel-border) bg-(--bg)/95 backdrop-blur-sm shadow-(--shadow-sm)">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         {/* Logo */}
         <Link
           to="/tasks"
-          className="flex items-center gap-2 text-[color:var(--text)] transition-opacity hover:opacity-80"
+          className="flex items-center gap-2 text-(--text) transition-opacity hover:opacity-80"
         >
-          <span className="rounded-lg bg-[color:var(--panel)] p-2 border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]">
+          <span className="rounded-lg bg-(--panel) p-2 border border-(--panel-border) shadow-(--shadow-sm)">
             <ListTodo size={18} />
           </span>
-          <span className="font-semibold text-[color:var(--text)]">Team Tasks</span>
+          <span className="font-semibold text-(--text)">Team Tasks</span>
         </Link>
 
         <nav className="flex items-center gap-2">
@@ -138,9 +141,9 @@ const dropdownOverlayClass = cn(
             className={({ isActive }) =>
               cn(
                 "rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                "text-[color:var(--muted)] hover:bg-[color:var(--panel)] hover:text-[color:var(--text)]",
+                "text-(--muted) hover:bg-(--panel) hover:text-(--text)",
                 isActive &&
-                  "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]"
+                  "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)"
               )
             }
           >
@@ -163,8 +166,8 @@ const dropdownOverlayClass = cn(
               type="button"
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
-                "hover:bg-[color:var(--panel-hover)] active:scale-95"
+                "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)",
+                "hover:bg-(--panel-hover) active:scale-95"
               )}
               aria-label="Change theme"
               title="Theme"
@@ -176,7 +179,7 @@ const dropdownOverlayClass = cn(
           </Dropdown>
 
           {/* Divider */}
-          <div className="mx-2 hidden h-6 w-px bg-[color:var(--panel-border)] sm:block" />
+          <div className="mx-2 hidden h-6 w-px bg-(--panel-border) sm:block" />
 
           {/* User Dropdown (Avatar button) */}
           <Dropdown
@@ -189,8 +192,8 @@ const dropdownOverlayClass = cn(
               type="button"
               className={cn(
                 "inline-flex items-center justify-center rounded-lg p-2 transition-all",
-                "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
-                "hover:bg-[color:var(--panel-hover)] active:scale-95"
+                "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)",
+                "hover:bg-(--panel-hover) active:scale-95"
               )}
               aria-label="User menu"
               title="Account"
