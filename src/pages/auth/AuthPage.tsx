@@ -34,14 +34,8 @@ const registerSchema = loginSchema
 type LoginValues = z.infer<typeof loginSchema>;
 type RegisterValues = z.infer<typeof registerSchema>;
 
-function shouldShowFieldError(opts: {
-  touched?: boolean;
-  dirty?: boolean;
-  submitCount: number;
-}) {
-  const { touched, dirty, submitCount } = opts;
-  return submitCount > 0 || (touched && dirty);
-}
+// ✅ show validation only after submit (no onChange re-renders)
+const showErrorAfterSubmit = (submitCount: number) => submitCount > 0;
 
 const THEME_META: Record<ThemeName, { label: string; dot: string }> = {
   ocean: { label: "Ocean", dot: "bg-blue-500" },
@@ -75,16 +69,21 @@ export default function AuthPage() {
     return "/tasks";
   }, [location.state]);
 
+  // ✅ onSubmit only => no validation updates while typing
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: { email: "", password: "" },
+    shouldFocusError: true,
   });
 
   const registerForm = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: { email: "", password: "", confirmPassword: "" },
+    shouldFocusError: true,
   });
 
   const onLogin = async (values: LoginValues) => {
@@ -119,47 +118,19 @@ export default function AuthPage() {
     }
   };
 
-  // errors visibility
+  // ✅ read formState only for submitCount + errors (updates only on submit now)
   const lf = loginForm.formState;
   const rf = registerForm.formState;
-
-  const showLoginEmailError = shouldShowFieldError({
-    touched: !!lf.touchedFields.email,
-    dirty: !!lf.dirtyFields.email,
-    submitCount: lf.submitCount,
-  });
-  const showLoginPasswordError = shouldShowFieldError({
-    touched: !!lf.touchedFields.password,
-    dirty: !!lf.dirtyFields.password,
-    submitCount: lf.submitCount,
-  });
-
-  const showRegEmailError = shouldShowFieldError({
-    touched: !!rf.touchedFields.email,
-    dirty: !!rf.dirtyFields.email,
-    submitCount: rf.submitCount,
-  });
-  const showRegPasswordError = shouldShowFieldError({
-    touched: !!rf.touchedFields.password,
-    dirty: !!rf.dirtyFields.password,
-    submitCount: rf.submitCount,
-  });
-  const showRegConfirmError = shouldShowFieldError({
-    touched: !!rf.touchedFields.confirmPassword,
-    dirty: !!rf.dirtyFields.confirmPassword,
-    submitCount: rf.submitCount,
-  });
 
   const panelClass =
     "rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur";
 
-  // ✅ placeholder now respects themes
   const inputBase =
     "w-full rounded-xl border bg-[color:var(--input-bg)] px-4 py-3 text-[color:var(--text)] placeholder:text-[color:var(--muted)] outline-none";
 
   const inputFocus = "focus:ring-2 focus:ring-[color:var(--ring)]";
 
-  // Theme menu items (no per-item onClick needed)
+  // Theme menu items
   const themeItems: MenuProps["items"] = useMemo(
     () =>
       (Object.keys(THEME_META) as ThemeName[]).map((key) => ({
@@ -168,9 +139,7 @@ export default function AuthPage() {
           <div className="flex items-center gap-2 px-1 py-0.5">
             <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
             <span className="text-(--text)">{THEME_META[key].label}</span>
-            {safeTheme === key && (
-              <span className="ml-auto text-xs text-(--muted)">Active</span>
-            )}
+            {safeTheme === key && <span className="ml-auto text-xs text-(--muted)">Active</span>}
           </div>
         ),
       })),
@@ -192,26 +161,17 @@ export default function AuthPage() {
     "[&_.ant-dropdown-menu-item]:!text-[color:var(--text)]",
     "[&_.ant-dropdown-menu-item]:!transition-all",
     "[&_.ant-dropdown-menu-item:hover]:!bg-[color:var(--panel-hover)]",
-    isDark
-      ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110"
-      : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
+    isDark ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110" : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
   );
 
-  // ✅ theme-aware tabs background
   const tabsWrap = cn(
     "mb-6 grid grid-cols-2 rounded-xl border border-[color:var(--panel-border)] p-1",
     "bg-[color:var(--panel)]"
   );
 
   const tabBtnBase = "rounded-lg px-3 py-2 text-sm font-semibold transition";
-
-  const tabBtnActive = cn(
-    "bg-[color:var(--panel-hover)] text-[color:var(--text)] shadow-[var(--shadow-sm)]"
-  );
-
-  const tabBtnInactive = cn(
-    "text-[color:var(--muted)] hover:text-[color:var(--text)]"
-  );
+  const tabBtnActive = cn("bg-[color:var(--panel-hover)] text-[color:var(--text)] shadow-[var(--shadow-sm)]");
+  const tabBtnInactive = cn("text-[color:var(--muted)] hover:text-[color:var(--text)]");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-(--bg)">
@@ -221,7 +181,6 @@ export default function AuthPage() {
           menu={{ items: themeItems, onClick: onThemeClick }}
           trigger={["click"]}
           placement="bottomLeft"
-          // ✅ AntD v5 (no warning)
           classNames={{ root: themeOverlayRoot }}
         >
           <button
@@ -234,7 +193,6 @@ export default function AuthPage() {
               "hover:bg-(--panel-hover) active:scale-95"
             )}
           >
-            {/* Active theme dot */}
             <span
               className={cn(
                 "absolute -right-1 -top-1 h-3 w-3 rounded-full border border-(--panel-border)",
@@ -252,9 +210,7 @@ export default function AuthPage() {
         <div className="w-full max-w-md">
           <div className={panelClass}>
             <div className="mb-5">
-              <h1 className="text-2xl font-semibold text-(--text)">
-                Team Tasks
-              </h1>
+              <h1 className="text-2xl font-semibold text-(--text)">Team Tasks</h1>
               <p className="mt-1 text-sm text-(--muted)">
                 {mode === "login" ? "Sign in to continue" : "Create your account to start"}
               </p>
@@ -267,6 +223,8 @@ export default function AuthPage() {
                 onClick={() => {
                   setServerError(null);
                   setMode("login");
+                  // optional: clear other form state when switching
+                  registerForm.reset({ email: "", password: "", confirmPassword: "" });
                 }}
                 className={cn(tabBtnBase, mode === "login" ? tabBtnActive : tabBtnInactive)}
               >
@@ -278,6 +236,8 @@ export default function AuthPage() {
                 onClick={() => {
                   setServerError(null);
                   setMode("register");
+                  // optional: clear other form state when switching
+                  loginForm.reset({ email: "", password: "" });
                 }}
                 className={cn(tabBtnBase, mode === "register" ? tabBtnActive : tabBtnInactive)}
               >
@@ -295,7 +255,10 @@ export default function AuthPage() {
             {/* LOGIN */}
             {mode === "login" && (
               <form noValidate className="space-y-4" onSubmit={loginForm.handleSubmit(onLogin)}>
-                <Field label="Email" error={showLoginEmailError ? lf.errors.email?.message : undefined}>
+                <Field
+                  label="Email"
+                  error={showErrorAfterSubmit(lf.submitCount) ? lf.errors.email?.message : undefined}
+                >
                   <Controller
                     name="email"
                     control={loginForm.control}
@@ -319,7 +282,7 @@ export default function AuthPage() {
 
                 <Field
                   label="Password"
-                  error={showLoginPasswordError ? lf.errors.password?.message : undefined}
+                  error={showErrorAfterSubmit(lf.submitCount) ? lf.errors.password?.message : undefined}
                 >
                   <Controller
                     name="password"
@@ -341,7 +304,7 @@ export default function AuthPage() {
 
                 <button
                   type="submit"
-                  disabled={!lf.isValid || submitting}
+                  disabled={submitting}
                   className={cn(
                     "w-full rounded-xl px-4 py-3 font-semibold text-white transition",
                     "bg-(--primary) hover:bg-(--primary-hover) active:bg-(--primary-active)",
@@ -357,7 +320,10 @@ export default function AuthPage() {
             {/* REGISTER */}
             {mode === "register" && (
               <form noValidate className="space-y-4" onSubmit={registerForm.handleSubmit(onRegister)}>
-                <Field label="Email" error={showRegEmailError ? rf.errors.email?.message : undefined}>
+                <Field
+                  label="Email"
+                  error={showErrorAfterSubmit(rf.submitCount) ? rf.errors.email?.message : undefined}
+                >
                   <Controller
                     name="email"
                     control={registerForm.control}
@@ -381,7 +347,7 @@ export default function AuthPage() {
 
                 <Field
                   label="Password"
-                  error={showRegPasswordError ? rf.errors.password?.message : undefined}
+                  error={showErrorAfterSubmit(rf.submitCount) ? rf.errors.password?.message : undefined}
                 >
                   <Controller
                     name="password"
@@ -403,7 +369,9 @@ export default function AuthPage() {
 
                 <Field
                   label="Confirm password"
-                  error={showRegConfirmError ? rf.errors.confirmPassword?.message : undefined}
+                  error={
+                    showErrorAfterSubmit(rf.submitCount) ? rf.errors.confirmPassword?.message : undefined
+                  }
                 >
                   <Controller
                     name="confirmPassword"
@@ -425,7 +393,7 @@ export default function AuthPage() {
 
                 <button
                   type="submit"
-                  disabled={!rf.isValid || submitting}
+                  disabled={submitting}
                   className={cn(
                     "w-full rounded-xl px-4 py-3 font-semibold text-white transition",
                     "bg-(--primary) hover:bg-(--primary-hover) active:bg-(--primary-active)",
@@ -457,9 +425,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-(--muted)">
-        {label}
-      </label>
+      <label className="mb-1 block text-sm font-medium text-(--muted)">{label}</label>
       {children}
       {error && <p className="mt-1 text-xs text-(--danger-text)">{error}</p>}
     </div>

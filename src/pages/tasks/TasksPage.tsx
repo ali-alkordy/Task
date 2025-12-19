@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Key } from "react";
 
 import { Button, DatePicker, Input, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
@@ -14,6 +14,8 @@ import { bulkMarkDone, listTasks, softDeleteTask } from "../../services/Tasks/ta
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 
+import AddTaskModal from "./components/AddTaskModal";
+
 const { RangePicker } = DatePicker;
 
 type SortField = "createdAt" | "updatedAt" | "dueDate" | "title" | "priority" | "status";
@@ -26,6 +28,8 @@ type PagedResult<T> = {
 export default function TasksPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
+
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -41,12 +45,32 @@ export default function TasksPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const ownerUid = user?.uid;
 
+  // ✅ Normalize filters BEFORE query + key
+  const statusFilter: TaskStatus | undefined = status === "All" ? undefined : status;
+  const priorityFilter: TaskPriority | undefined = priority === "All" ? undefined : priority;
+
+  const dueFrom = dueRange[0] ?? undefined;
+  const dueTo = dueRange[1] ?? undefined;
+
   const queryKey = useMemo(
-    () => ["tasks", ownerUid, page, pageSize, search, status, priority, dueRange, sortField, sortOrder] as const,
-    [ownerUid, page, pageSize, search, status, priority, dueRange, sortField, sortOrder]
+    () =>
+      [
+        "tasks",
+        ownerUid,
+        page,
+        pageSize,
+        search,
+        statusFilter ?? "ALL",
+        priorityFilter ?? "ALL",
+        dueFrom ?? "NONE",
+        dueTo ?? "NONE",
+        sortField,
+        sortOrder,
+      ] as const,
+    [ownerUid, page, pageSize, search, statusFilter, priorityFilter, dueFrom, dueTo, sortField, sortOrder]
   );
 
-  const { data, isLoading, isFetching } = useQuery<PagedResult<Task>>({
+  const { data, isLoading, isFetching, isError, error } = useQuery<PagedResult<Task>>({
     queryKey,
     enabled: !!ownerUid,
     queryFn: () =>
@@ -55,15 +79,23 @@ export default function TasksPage() {
         page,
         pageSize,
         search,
-        status,
-        priority,
-        dueFrom: dueRange[0] ?? undefined,
-        dueTo: dueRange[1] ?? undefined,
+        status: statusFilter,
+        priority: priorityFilter,
+        dueFrom,
+        dueTo,
         sortField,
         sortOrder,
       }),
     placeholderData: keepPreviousData,
   });
+
+  // ✅ show query errors clearly
+  useEffect(() => {
+    if (isError) {
+      console.error("listTasks error:", error);
+      toast.error((error as any)?.message ?? "Failed to load tasks");
+    }
+  }, [isError, error]);
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => softDeleteTask(id),
@@ -112,11 +144,11 @@ export default function TasksPage() {
       sorter: true,
       render: (v: string, row) => (
         <div className="min-w-[220px]">
-          <div className="font-semibold text-[color:var(--text)]">{v}</div>
+          <div className="font-semibold text-(--text)">{v}</div>
           {row.description ? (
-            <div className="mt-1 line-clamp-1 text-xs text-[color:var(--muted)]">{row.description}</div>
+            <div className="mt-1 line-clamp-1 text-xs text-(--muted)">{row.description}</div>
           ) : (
-            <div className="mt-1 text-xs text-[color:var(--muted)]/70">No description</div>
+            <div className="mt-1 text-xs text-(--muted)">No description</div>
           )}
         </div>
       ),
@@ -128,15 +160,14 @@ export default function TasksPage() {
       dataIndex: "dueDate",
       sorter: true,
       width: 160,
-      render: (v?: string | null) =>
-        v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-[color:var(--muted)]">—</span>,
+      render: (v?: string | null) => (v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-(--muted)">—</span>),
     },
     {
       title: "Updated",
       dataIndex: "updatedAt",
       sorter: true,
       width: 180,
-      render: (v: string) => <span className="text-[color:var(--muted)]">{dayjs(v).format("YYYY-MM-DD HH:mm")}</span>,
+      render: (v: string) => <span className="text-(--muted)">{dayjs(v).format("YYYY-MM-DD HH:mm")}</span>,
     },
     {
       title: "",
@@ -147,9 +178,11 @@ export default function TasksPage() {
           <Tooltip title="View">
             <Button size="small" onClick={() => toast.info(`View: ${row.title}`)} icon={<Eye size={16} />} />
           </Tooltip>
+
           <Tooltip title="Edit (demo)">
             <Button size="small" onClick={() => toast.info("Next: open edit modal")} icon={<Pencil size={16} />} />
           </Tooltip>
+
           <Tooltip title="Delete">
             <Button
               size="small"
@@ -176,6 +209,8 @@ export default function TasksPage() {
     setPageSize(p.pageSize ?? 10);
 
     const s = Array.isArray(sorter) ? sorter[0] : sorter;
+
+    // if user clears sorting, keep current
     if (s?.field && s?.order) {
       setSortField(s.field as SortField);
       setSortOrder(s.order as any);
@@ -185,19 +220,30 @@ export default function TasksPage() {
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
+  // ✅ Debug (keep for now)
+  useEffect(() => {
+    console.log("Tasks debug:", {
+      ownerUid,
+      isLoading,
+      isFetching,
+      isError,
+      total,
+      itemsLen: items.length,
+      firstItem: items[0],
+      queryKey,
+    });
+  }, [ownerUid, isLoading, isFetching, isError, total, items, queryKey]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[color:var(--text)]">Tasks</h2>
-          <p className="text-sm text-[color:var(--muted)]">
-            Manage your tasks with search, filters, sorting and bulk actions.
-          </p>
+          <h2 className="text-xl font-semibold text-(--text)">Tasks</h2>
+          <p className="text-sm text-(--muted)">Manage your tasks with search, filters, sorting and bulk actions.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* AntD will use colorPrimary from ThemeProvider */}
-          <Button type="primary" onClick={() => toast.info("Next: open create task modal")}>
+          <Button type="primary" onClick={() => setCreateOpen(true)}>
             + New Task
           </Button>
 
@@ -211,8 +257,7 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
+      <div className="rounded-xl border border-(--panel-border) bg-(--panel) p-3">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
             <Input
@@ -285,26 +330,28 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-2">
+      <div className="rounded-xl border border-(--panel-border) bg-(--panel) p-2">
         <Table<Task>
           rowKey="id"
           loading={isLoading || isFetching}
           columns={columns}
           dataSource={items}
           onChange={onTableChange}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: true,
-          }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
+          pagination={{ current: page, pageSize, total, showSizeChanger: true }}
+          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+          locale={{
+            emptyText: (
+              <div className="py-8 text-center">
+                <div className="text-(--text) font-semibold">No tasks found</div>
+                <div className="text-(--muted) text-sm">Try reset filters or add new tasks.</div>
+              </div>
+            ),
           }}
         />
       </div>
+
+      {/* ✅ Create Task Modal */}
+      <AddTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }
