@@ -1,52 +1,155 @@
-/* Default theme (ocean) */
-:root {
-  --bg: #020617;                       /* slate-950 */
-  --glow-rgb: 59,130,246;              /* blue */
-  --panel: rgba(255,255,255,0.05);
-  --panel-border: rgba(255,255,255,0.10);
+/* Default = Ocean (Dark) */
+:root,
+:root[data-theme="ocean"] {
+  --bg: #020617;
+  --bg-rgb: 2, 6, 23;               /* ✅ add */
+  --waves-base-rgb: 15, 23, 42;     /* ✅ add (base wave color) */
 
-  --text: rgba(255,255,255,1);
-  --muted: rgba(255,255,255,0.70);
+  --glow-rgb: 59, 130, 246;
 
-  --input-bg: rgba(0,0,0,0.30);
-  --input-border: rgba(255,255,255,0.10);
-  --ring: rgba(59,130,246,0.60);
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel-border: rgba(255, 255, 255, 0.12);
+
+  --text: rgba(255, 255, 255, 1);
+  --muted: rgba(255, 255, 255, 0.7);
+
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --ring: rgba(59, 130, 246, 0.55);
 
   --primary: #2563eb;
   --primary-hover: #3b82f6;
   --primary-active: #1d4ed8;
 
-  --danger-border: rgba(239,68,68,0.30);
-  --danger-bg: rgba(239,68,68,0.10);
-  --danger-text: rgba(254,202,202,1);
+  --danger-border: rgba(239, 68, 68, 0.3);
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-text: rgba(254, 202, 202, 1);
 }
 
-/* Theme 1: Emerald */
+/* Emerald (Dark) */
 :root[data-theme="emerald"] {
-  --glow-rgb: 16,185,129;
-  --ring: rgba(16,185,129,0.55);
+  --bg: #02130d;
+  --bg-rgb: 2, 19, 13;              /* ✅ add */
+  --waves-base-rgb: 2, 19, 13;       /* ✅ add */
+
+  --glow-rgb: 16, 185, 129;
+
+  --panel: rgba(16, 185, 129, 0.1);
+  --panel-border: rgba(16, 185, 129, 0.22);
+
+  --text: rgba(255, 255, 255, 1);
+  --muted: rgba(255, 255, 255, 0.7);
+
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(16, 185, 129, 0.22);
+  --ring: rgba(16, 185, 129, 0.55);
 
   --primary: #059669;
   --primary-hover: #10b981;
   --primary-active: #047857;
+
+  --danger-border: rgba(239, 68, 68, 0.3);
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-text: rgba(254, 202, 202, 1);
 }
 
-/* Theme 2: Violet */
+/* Violet (Dark) */
 :root[data-theme="violet"] {
-  --glow-rgb: 168,85,247;
-  --ring: rgba(168,85,247,0.55);
+  --bg: #0b0616;
+  --bg-rgb: 11, 6, 22;              /* ✅ add */
+  --waves-base-rgb: 11, 6, 22;       /* ✅ add */
+
+  --glow-rgb: 168, 85, 247;
+
+  --panel: rgba(168, 85, 247, 0.1);
+  --panel-border: rgba(168, 85, 247, 0.22);
+
+  --text: rgba(255, 255, 255, 1);
+  --muted: rgba(255, 255, 255, 0.7);
+
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(168, 85, 247, 0.22);
+  --ring: rgba(168, 85, 247, 0.55);
 
   --primary: #7c3aed;
   --primary-hover: #8b5cf6;
   --primary-active: #6d28d9;
+
+  --danger-border: rgba(239, 68, 68, 0.3);
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-text: rgba(254, 202, 202, 1);
 }
 
-/* Theme 3: Amber */
+/* Amber (Dark) */
 :root[data-theme="amber"] {
-  --glow-rgb: 245,158,11;
-  --ring: rgba(245,158,11,0.55);
+  --bg: #140b02;
+  --bg-rgb: 20, 11, 2;              /* ✅ add */
+  --waves-base-rgb: 20, 11, 2;       /* ✅ add */
+
+  --glow-rgb: 245, 158, 11;
+
+  --panel: rgba(245, 158, 11, 0.1);
+  --panel-border: rgba(245, 158, 11, 0.22);
+
+  --text: rgba(255, 255, 255, 1);
+  --muted: rgba(255, 255, 255, 0.7);
+
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(245, 158, 11, 0.22);
+  --ring: rgba(245, 158, 11, 0.55);
 
   --primary: #d97706;
   --primary-hover: #f59e0b;
   --primary-active: #b45309;
+
+  --danger-border: rgba(239, 68, 68, 0.25);
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-text: rgba(254, 202, 202, 1);
+}
+
+/* =========================
+   Light Theme
+   ========================= */
+:root[data-theme="light"] {
+  --bg: #f8fafc; /* slate-50 */
+  --bg-rgb: 248, 250, 252;           /* ✅ add */
+  --waves-base-rgb: 2, 6, 23;         /* ✅ add (dark base so waves show on light) */
+
+  --glow-rgb: 37, 99, 235; /* still blue glow */
+
+  --panel: rgba(15, 23, 42, 0.04);
+  --panel-border: rgba(15, 23, 42, 0.10);
+
+  --text: rgba(15, 23, 42, 1);
+  --muted: rgba(15, 23, 42, 0.65);
+
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: rgba(15, 23, 42, 0.14);
+  --ring: rgba(37, 99, 235, 0.35);
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+
+  --danger-border: rgba(220, 38, 38, 0.25);
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --danger-text: rgba(127, 29, 29, 1);
+}
+
+/* Defaults (dark themes) */
+:root {
+  --panel-hover: rgba(255, 255, 255, 0.10);
+  --panel-elevated: rgba(255, 255, 255, 0.08);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* Light theme overrides */
+:root[data-theme="light"] {
+  --panel-elevated: rgba(255, 255, 255, 0.98);
+  --panel-hover: rgba(2, 6, 23, 0.06);
+
+  --shadow-sm: 0 1px 3px rgba(2, 6, 23, 0.12);
+  --shadow-lg: 0 20px 50px rgba(2, 6, 23, 0.18);
 }

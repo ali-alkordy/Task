@@ -1,17 +1,20 @@
 import React from "react";
 
 /*
-  AnimatedWaves
-  - Reusable SVG wave animation you can drop into any page
-  - Self-contained: includes its own keyframes and unique IDs to avoid collisions
-  - Works in CRA / Vite / Next.js
+  AnimatedWaves (Theme-aware)
+  - Uses CSS vars directly in fill: rgba(var(--glow-rgb), x)
+  - No getComputedStyle (prevents theme mismatch glitch)
+  - Self-contained keyframes + unique IDs
 */
 
 export type WaveLayer = {
   y: number;
-  fill: string;
   duration: number; // seconds
   reverse?: boolean;
+
+  // optional overrides
+  opacity?: number; // used if fill not provided
+  fill?: string; // hard override (optional)
 };
 
 export type AnimatedWavesProps = {
@@ -23,10 +26,10 @@ export type AnimatedWavesProps = {
 };
 
 const DEFAULT_LAYERS: WaveLayer[] = [
-  { y: 0, fill: "rgba(56, 189, 248, 0.10)", duration: 10, reverse: false }, // sky glow
-  { y: 3, fill: "rgba(59, 130, 246, 0.30)", duration: 8, reverse: true },  // blue
-  { y: 5, fill: "rgba(14, 165, 233, 0.45)", duration: 6, reverse: false }, // cyan
-  { y: 7, fill: "rgba(15, 23, 42, 0.85)", duration: 4, reverse: true },    // slate/dark base
+  { y: 0, opacity: 0.10, duration: 10, reverse: false },
+  { y: 3, opacity: 0.22, duration: 8, reverse: true },
+  { y: 5, opacity: 0.34, duration: 6, reverse: false },
+  { y: 7, opacity: 0.85, duration: 4, reverse: true },
 ];
 
 export default function AnimatedWaves({
@@ -36,14 +39,25 @@ export default function AnimatedWaves({
   layers = DEFAULT_LAYERS,
   withWrapper = true,
 }: AnimatedWavesProps) {
-  // Unique IDs so multiple wave components won't conflict on the same page
   const uid = React.useId().replace(/:/g, "");
   const waveKeyframesName = `wave-${uid}`;
   const pathId = `gentle-wave-${uid}`;
 
+  // ✅ Build fill using CSS vars (always in sync with current theme)
+  const getFill = (layer: WaveLayer, idx: number) => {
+    if (layer.fill) return layer.fill;
+
+    const isBase = idx === layers.length - 1;
+    const opacity = layer.opacity ?? (isBase ? 0.85 : 0.2);
+
+    // glow layers use --glow-rgb, last base layer uses --waves-base-rgb
+    return isBase
+      ? `rgba(var(--waves-base-rgb), ${opacity})`
+      : `rgba(var(--glow-rgb), ${opacity})`;
+  };
+
   const Svg = (
     <>
-      {/* Keyframes defined in normal <style> for portability across projects */}
       <style>
         {`
           @keyframes ${waveKeyframesName} {
@@ -63,14 +77,12 @@ export default function AnimatedWaves({
         shapeRendering="auto"
       >
         <defs>
-          {/* Path used by all wave layers */}
           <path
             id={pathId}
             d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"
           />
         </defs>
 
-        {/* Each layer reuses the same path with different fill and animation speed */}
         <g>
           {layers.map((layer, idx) => (
             <use
@@ -78,7 +90,7 @@ export default function AnimatedWaves({
               xlinkHref={`#${pathId}`}
               x={48}
               y={layer.y}
-              fill={layer.fill}
+              fill={getFill(layer, idx)}
               style={
                 {
                   animationName: waveKeyframesName,
@@ -95,7 +107,6 @@ export default function AnimatedWaves({
     </>
   );
 
-  // Optional wrapper that matches your page layout usage (bottom full width)
   if (withWrapper) {
     return (
       <div className={`absolute bottom-0 left-0 w-full overflow-hidden ${className}`}>
@@ -104,6 +115,5 @@ export default function AnimatedWaves({
     );
   }
 
-  // If you want to control positioning outside the component
   return <div className={className}>{Svg}</div>;
 }

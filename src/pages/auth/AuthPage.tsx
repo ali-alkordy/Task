@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { Palette } from "lucide-react";
 
 import AnimatedWaves from "../../components/ui/AnimatedWaves";
 import PasswordInput from "../../components/ui/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme, type ThemeName } from "../../providers/ThemeProvider";
 import { toast } from "../../utils/toast";
 import { firebaseAuthErrorMessage } from "../../utils/firebaseError";
 import { cn } from "../../utils/cn";
@@ -39,10 +43,24 @@ function shouldShowFieldError(opts: {
   return submitCount > 0 || (touched && dirty);
 }
 
+const THEME_META: Record<ThemeName, { label: string; dot: string }> = {
+  ocean: { label: "Ocean", dot: "bg-blue-500" },
+  emerald: { label: "Emerald", dot: "bg-emerald-500" },
+  violet: { label: "Violet", dot: "bg-violet-500" },
+  amber: { label: "Amber", dot: "bg-amber-500" },
+  light: { label: "Light", dot: "bg-slate-300" },
+};
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, register } = useAuth();
+  const { theme, setTheme, isDark } = useTheme();
+
+  const safeTheme: ThemeName =
+    theme && Object.prototype.hasOwnProperty.call(THEME_META, theme)
+      ? theme
+      : "ocean";
 
   const [mode, setMode] = useState<Mode>("login");
   const [serverError, setServerError] = useState<string | null>(null);
@@ -138,8 +156,73 @@ export default function AuthPage() {
 
   const inputFocus = "focus:ring-2 focus:ring-[color:var(--ring)]";
 
+  // Theme dropdown menu items
+  const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map(
+    (key) => ({
+      key,
+      onClick: () => setTheme(key),
+      label: (
+        <div className="flex items-center gap-2 px-1 py-0.5">
+          <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
+          <span className="text-[color:var(--text)]">{THEME_META[key].label}</span>
+          {safeTheme === key && (
+            <span className="ml-auto text-xs text-[color:var(--muted)]">Active</span>
+          )}
+        </div>
+      ),
+    })
+  );
+
+  const themeOverlay = cn(
+    "theme-dropdown-overlay",
+    "[&_.ant-dropdown-menu]:!min-w-[200px]",
+    "[&_.ant-dropdown-menu]:!rounded-xl",
+    "[&_.ant-dropdown-menu]:!p-1",
+    "[&_.ant-dropdown-menu]:!bg-[color:var(--panel-elevated)]",
+    "[&_.ant-dropdown-menu]:!border [&_.ant-dropdown-menu]:!border-[color:var(--panel-border)]",
+    "[&_.ant-dropdown-menu]:!shadow-[var(--shadow-lg)]",
+    "[&_.ant-dropdown-menu]:!backdrop-blur-md",
+    "[&_.ant-dropdown-menu-item]:!rounded-lg",
+    "[&_.ant-dropdown-menu-item]:!text-[color:var(--text)]",
+    "[&_.ant-dropdown-menu-item]:!transition-all",
+    "[&_.ant-dropdown-menu-item:hover]:!bg-[color:var(--panel-hover)]",
+    isDark
+      ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110"
+      : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
+  );
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[color:var(--bg)]">
+      {/* Theme Picker Circle (Top-Left) */}
+      <div className="absolute left-4 top-4 z-20">
+        <Dropdown
+          menu={{ items: themeItems }}
+          trigger={["click"]}
+          placement="bottomLeft"
+          overlayClassName={themeOverlay}
+        >
+          <button
+            type="button"
+            aria-label="Change theme"
+            title="Theme"
+            className={cn(
+              "group relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-all",
+              "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
+              "hover:bg-[color:var(--panel-hover)] active:scale-95"
+            )}
+          >
+            {/* Active theme dot */}
+            <span
+              className={cn(
+                "absolute -right-1 -top-1 h-3 w-3 rounded-full border border-[color:var(--panel-border)]",
+                THEME_META[safeTheme].dot
+              )}
+            />
+            <Palette size={18} className="opacity-90 group-hover:opacity-100" />
+          </button>
+        </Dropdown>
+      </div>
+
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(var(--glow-rgb),0.16),transparent_55%)]" />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
@@ -200,8 +283,15 @@ export default function AuthPage() {
 
             {/* LOGIN */}
             {mode === "login" && (
-              <form noValidate className="space-y-4" onSubmit={loginForm.handleSubmit(onLogin)}>
-                <Field label="Email" error={showLoginEmailError ? lf.errors.email?.message : undefined}>
+              <form
+                noValidate
+                className="space-y-4"
+                onSubmit={loginForm.handleSubmit(onLogin)}
+              >
+                <Field
+                  label="Email"
+                  error={showLoginEmailError ? lf.errors.email?.message : undefined}
+                >
                   <Controller
                     name="email"
                     control={loginForm.control}
@@ -215,7 +305,9 @@ export default function AuthPage() {
                         className={cn(
                           inputBase,
                           inputFocus,
-                          lf.errors.email ? "border-red-500/60" : "border-[color:var(--input-border)]",
+                          lf.errors.email
+                            ? "border-red-500/60"
+                            : "border-[color:var(--input-border)]",
                           submitting && "cursor-not-allowed opacity-70"
                         )}
                       />
@@ -225,7 +317,9 @@ export default function AuthPage() {
 
                 <Field
                   label="Password"
-                  error={showLoginPasswordError ? lf.errors.password?.message : undefined}
+                  error={
+                    showLoginPasswordError ? lf.errors.password?.message : undefined
+                  }
                 >
                   <Controller
                     name="password"
@@ -262,8 +356,15 @@ export default function AuthPage() {
 
             {/* REGISTER */}
             {mode === "register" && (
-              <form noValidate className="space-y-4" onSubmit={registerForm.handleSubmit(onRegister)}>
-                <Field label="Email" error={showRegEmailError ? rf.errors.email?.message : undefined}>
+              <form
+                noValidate
+                className="space-y-4"
+                onSubmit={registerForm.handleSubmit(onRegister)}
+              >
+                <Field
+                  label="Email"
+                  error={showRegEmailError ? rf.errors.email?.message : undefined}
+                >
                   <Controller
                     name="email"
                     control={registerForm.control}
@@ -277,7 +378,9 @@ export default function AuthPage() {
                         className={cn(
                           inputBase,
                           inputFocus,
-                          rf.errors.email ? "border-red-500/60" : "border-[color:var(--input-border)]",
+                          rf.errors.email
+                            ? "border-red-500/60"
+                            : "border-[color:var(--input-border)]",
                           submitting && "cursor-not-allowed opacity-70"
                         )}
                       />
@@ -287,7 +390,9 @@ export default function AuthPage() {
 
                 <Field
                   label="Password"
-                  error={showRegPasswordError ? rf.errors.password?.message : undefined}
+                  error={
+                    showRegPasswordError ? rf.errors.password?.message : undefined
+                  }
                 >
                   <Controller
                     name="password"
@@ -309,7 +414,11 @@ export default function AuthPage() {
 
                 <Field
                   label="Confirm password"
-                  error={showRegConfirmError ? rf.errors.confirmPassword?.message : undefined}
+                  error={
+                    showRegConfirmError
+                      ? rf.errors.confirmPassword?.message
+                      : undefined
+                  }
                 >
                   <Controller
                     name="confirmPassword"
@@ -363,7 +472,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-[color:var(--muted)]">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-[color:var(--muted)]">
+        {label}
+      </label>
       {children}
       {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
     </div>

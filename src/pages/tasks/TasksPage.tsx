@@ -1,17 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Key } from "react";
 
-import {
-  Button,
-  DatePicker,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
-} from "antd";
+import { Button, DatePicker, Input, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -19,21 +9,9 @@ import dayjs from "dayjs";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "../../utils/toast";
 import type { Task, TaskPriority, TaskStatus } from "../../types/task";
+import { bulkMarkDone, listTasks, softDeleteTask } from "../../services/Tasks/tasks.service";
 
-// ✅ remove ".ts" from import path
-import {
-  bulkMarkDone,
-  listTasks,
-  softDeleteTask,
-} from "../../services/Tasks/tasks.service";
-
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 
 const { RangePicker } = DatePicker;
@@ -61,7 +39,6 @@ export default function TasksPage() {
   const [sortOrder, setSortOrder] = useState<"ascend" | "descend">("descend");
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-
   const ownerUid = user?.uid;
 
   const queryKey = useMemo(
@@ -85,7 +62,6 @@ export default function TasksPage() {
         sortField,
         sortOrder,
       }),
-    // ✅ v5 replacement for keepPreviousData: true
     placeholderData: keepPreviousData,
   });
 
@@ -136,47 +112,31 @@ export default function TasksPage() {
       sorter: true,
       render: (v: string, row) => (
         <div className="min-w-[220px]">
-          <div className="font-semibold text-white">{v}</div>
+          <div className="font-semibold text-[color:var(--text)]">{v}</div>
           {row.description ? (
-            <div className="mt-1 line-clamp-1 text-xs text-white/60">
-              {row.description}
-            </div>
+            <div className="mt-1 line-clamp-1 text-xs text-[color:var(--muted)]">{row.description}</div>
           ) : (
-            <div className="mt-1 text-xs text-white/40">No description</div>
+            <div className="mt-1 text-xs text-[color:var(--muted)]/70">No description</div>
           )}
         </div>
       ),
     },
-    {
-      title: "Status",
-      dataIndex: "status",
-      sorter: true,
-      width: 140,
-      render: (v: TaskStatus) => statusTag(v),
-    },
-    {
-      title: "Priority",
-      dataIndex: "priority",
-      sorter: true,
-      width: 140,
-      render: (v: TaskPriority) => priorityTag(v),
-    },
+    { title: "Status", dataIndex: "status", sorter: true, width: 140, render: (v: TaskStatus) => statusTag(v) },
+    { title: "Priority", dataIndex: "priority", sorter: true, width: 140, render: (v: TaskPriority) => priorityTag(v) },
     {
       title: "Due",
       dataIndex: "dueDate",
       sorter: true,
       width: 160,
       render: (v?: string | null) =>
-        v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-white/40">—</span>,
+        v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-[color:var(--muted)]">—</span>,
     },
     {
       title: "Updated",
       dataIndex: "updatedAt",
       sorter: true,
       width: 180,
-      render: (v: string) => (
-        <span className="text-white/70">{dayjs(v).format("YYYY-MM-DD HH:mm")}</span>
-      ),
+      render: (v: string) => <span className="text-[color:var(--muted)]">{dayjs(v).format("YYYY-MM-DD HH:mm")}</span>,
     },
     {
       title: "",
@@ -187,11 +147,9 @@ export default function TasksPage() {
           <Tooltip title="View">
             <Button size="small" onClick={() => toast.info(`View: ${row.title}`)} icon={<Eye size={16} />} />
           </Tooltip>
-
           <Tooltip title="Edit (demo)">
             <Button size="small" onClick={() => toast.info("Next: open edit modal")} icon={<Pencil size={16} />} />
           </Tooltip>
-
           <Tooltip title="Delete">
             <Button
               size="small"
@@ -213,11 +171,7 @@ export default function TasksPage() {
     },
   ];
 
-  const onTableChange = (
-    p: TablePaginationConfig,
-    _filters: any,
-    sorter: SorterResult<Task> | SorterResult<Task>[]
-  ) => {
+  const onTableChange = (p: TablePaginationConfig, _filters: any, sorter: SorterResult<Task> | SorterResult<Task>[]) => {
     setPage(p.current ?? 1);
     setPageSize(p.pageSize ?? 10);
 
@@ -235,18 +189,15 @@ export default function TasksPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">Tasks</h2>
-          <p className="text-sm text-white/60">
+          <h2 className="text-xl font-semibold text-[color:var(--text)]">Tasks</h2>
+          <p className="text-sm text-[color:var(--muted)]">
             Manage your tasks with search, filters, sorting and bulk actions.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="primary"
-            className="!bg-[color:var(--primary)] hover:!bg-[color:var(--primary-hover)]"
-            onClick={() => toast.info("Next: open create task modal")}
-          >
+          {/* AntD will use colorPrimary from ThemeProvider */}
+          <Button type="primary" onClick={() => toast.info("Next: open create task modal")}>
             + New Task
           </Button>
 
@@ -260,7 +211,8 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      {/* Filters */}
+      <div className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-3">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
             <Input
@@ -333,7 +285,8 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+      {/* Table */}
+      <div className="rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-2">
         <Table<Task>
           rowKey="id"
           loading={isLoading || isFetching}
