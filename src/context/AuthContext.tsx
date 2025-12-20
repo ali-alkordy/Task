@@ -1,13 +1,14 @@
+// src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import type { User } from "firebase/auth";
-
-
-import { auth } from "../api/firebase";
 import * as AuthService from "../services/Auth/auth.service";
 
+export type AuthUser = {
+  uid: string;
+  email: string;
+};
+
 type AuthValue = {
-  user: User | null;
+  user: AuthUser | null;
   hydrated: boolean;
   isAuthenticated: boolean;
   register: (email: string, password: string) => Promise<void>;
@@ -18,25 +19,39 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
+  // ✅ Hydrate from stored accessToken
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setHydrated(true);
-    });
-    return () => unsub();
+    const session = AuthService.getSession();
+    setUser(session?.user ?? null);
+    setHydrated(true);
   }, []);
 
-  const value = useMemo<AuthValue>(() => ({
-    user,
-    hydrated,
-    isAuthenticated: !!user,
-    register: async (email, password) => { await AuthService.register(email, password); },
-    login: async (email, password) => { await AuthService.login(email, password); },
-    logout: async () => { await AuthService.logout(); },
-  }), [user, hydrated]);
+  const value = useMemo<AuthValue>(
+    () => ({
+      user,
+      hydrated,
+      isAuthenticated: !!user,
+
+      register: async (email, password) => {
+        const u = await AuthService.register(email, password);
+        setUser(u);
+      },
+
+      login: async (email, password) => {
+        const u = await AuthService.login(email, password);
+        setUser(u);
+      },
+
+      logout: async () => {
+        await AuthService.logout();
+        setUser(null);
+      },
+    }),
+    [user, hydrated]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

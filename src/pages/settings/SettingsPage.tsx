@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,16 @@ type FormValues = z.infer<typeof schema>;
 function shouldShowFieldError(opts: { touched?: boolean; dirty?: boolean; submitCount: number }) {
   const { touched, dirty, submitCount } = opts;
   return submitCount > 0 || (touched && dirty);
+}
+
+function getNiceError(err: unknown) {
+  // ✅ prefer backend message, fallback to your existing helper
+  return (
+    (err as any)?.response?.data?.message ||
+    (err as any)?.message ||
+    firebaseAuthErrorMessage(err) ||
+    "Something went wrong"
+  );
 }
 
 export default function SettingsPage() {
@@ -83,7 +93,7 @@ export default function SettingsPage() {
       toast.success("Password updated ✅");
       form.reset();
     } catch (err: unknown) {
-      const msg = firebaseAuthErrorMessage(err);
+      const msg = getNiceError(err);
       setServerError(msg);
       toast.error(msg);
     } finally {
@@ -140,10 +150,7 @@ export default function SettingsPage() {
             />
           </Field>
 
-          <Field
-            label="New password"
-            error={showNewError ? fs.errors.newPassword?.message : undefined}
-          >
+          <Field label="New password" error={showNewError ? fs.errors.newPassword?.message : undefined}>
             <Controller
               name="newPassword"
               control={form.control}

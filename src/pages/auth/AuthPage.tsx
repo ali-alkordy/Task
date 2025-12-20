@@ -1,5 +1,6 @@
+// src/pages/Auth/AuthPage.tsx
 import React, { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,9 +46,21 @@ const THEME_META: Record<ThemeName, { label: string; dot: string }> = {
   light: { label: "Light", dot: "bg-slate-300" },
 };
 
+function getNiceError(err: unknown) {
+  // ✅ prefer backend { message } first, then generic helpers
+  return (
+    (err as any)?.response?.data?.message ||
+    (err as any)?.message ||
+    firebaseAuthErrorMessage(err) ||
+    "Something went wrong"
+  );
+}
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+
   const { login, register } = useAuth();
   const { theme, setTheme } = useTheme();
 
@@ -63,11 +76,15 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const redirectTo = useMemo(() => {
+    // ✅ supports /login?next=/tasks (used by interceptor redirect)
+    const next = searchParams.get("next");
+    if (next) return decodeURIComponent(next);
+
     const from = (location.state as any)?.from;
     if (typeof from === "string") return from;
     if (from?.pathname) return from.pathname + (from.search ?? "");
     return "/tasks";
-  }, [location.state]);
+  }, [location.state, searchParams]);
 
   // ✅ onSubmit only => no validation updates while typing
   const loginForm = useForm<LoginValues>({
@@ -90,11 +107,11 @@ export default function AuthPage() {
     setServerError(null);
     setSubmitting(true);
     try {
-      await login(values.email, values.password);
+      await login(values.email, values.password); // ✅ depends on your AuthService via AuthContext
       toast.success("Signed in successfully");
       navigate(redirectTo, { replace: true });
     } catch (err: unknown) {
-      const msg = firebaseAuthErrorMessage(err);
+      const msg = getNiceError(err);
       setServerError(msg);
       toast.error(msg);
     } finally {
@@ -106,11 +123,11 @@ export default function AuthPage() {
     setServerError(null);
     setSubmitting(true);
     try {
-      await register(values.email, values.password);
+      await register(values.email, values.password); // ✅ depends on your AuthService via AuthContext
       toast.success("Account created");
       navigate(redirectTo, { replace: true });
     } catch (err: unknown) {
-      const msg = firebaseAuthErrorMessage(err);
+      const msg = getNiceError(err);
       setServerError(msg);
       toast.error(msg);
     } finally {
@@ -223,7 +240,6 @@ export default function AuthPage() {
                 onClick={() => {
                   setServerError(null);
                   setMode("login");
-                  // optional: clear other form state when switching
                   registerForm.reset({ email: "", password: "", confirmPassword: "" });
                 }}
                 className={cn(tabBtnBase, mode === "login" ? tabBtnActive : tabBtnInactive)}
@@ -236,7 +252,6 @@ export default function AuthPage() {
                 onClick={() => {
                   setServerError(null);
                   setMode("register");
-                  // optional: clear other form state when switching
                   loginForm.reset({ email: "", password: "" });
                 }}
                 className={cn(tabBtnBase, mode === "register" ? tabBtnActive : tabBtnInactive)}
@@ -255,10 +270,7 @@ export default function AuthPage() {
             {/* LOGIN */}
             {mode === "login" && (
               <form noValidate className="space-y-4" onSubmit={loginForm.handleSubmit(onLogin)}>
-                <Field
-                  label="Email"
-                  error={showErrorAfterSubmit(lf.submitCount) ? lf.errors.email?.message : undefined}
-                >
+                <Field label="Email" error={showErrorAfterSubmit(lf.submitCount) ? lf.errors.email?.message : undefined}>
                   <Controller
                     name="email"
                     control={loginForm.control}
@@ -320,10 +332,7 @@ export default function AuthPage() {
             {/* REGISTER */}
             {mode === "register" && (
               <form noValidate className="space-y-4" onSubmit={registerForm.handleSubmit(onRegister)}>
-                <Field
-                  label="Email"
-                  error={showErrorAfterSubmit(rf.submitCount) ? rf.errors.email?.message : undefined}
-                >
+                <Field label="Email" error={showErrorAfterSubmit(rf.submitCount) ? rf.errors.email?.message : undefined}>
                   <Controller
                     name="email"
                     control={registerForm.control}
@@ -369,9 +378,7 @@ export default function AuthPage() {
 
                 <Field
                   label="Confirm password"
-                  error={
-                    showErrorAfterSubmit(rf.submitCount) ? rf.errors.confirmPassword?.message : undefined
-                  }
+                  error={showErrorAfterSubmit(rf.submitCount) ? rf.errors.confirmPassword?.message : undefined}
                 >
                   <Controller
                     name="confirmPassword"

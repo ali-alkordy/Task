@@ -1,7 +1,8 @@
+// src/pages/Tasks/TasksPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Key } from "react";
 
-import { Button, DatePicker, Input, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
+import { Button, DatePicker, Input, Select, Space, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -9,12 +10,15 @@ import dayjs from "dayjs";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "../../utils/toast";
 import type { Task, TaskPriority, TaskStatus } from "../../types/task";
-import { bulkMarkDone, listTasks, softDeleteTask } from "../../services/Tasks/tasks.service";
+import { bulkMarkDone, listTasks } from "../../services/Tasks/tasks.service";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 
 import AddTaskModal from "./components/AddTaskModal";
+import EditTaskModal from "./components/EditTaskModal";
+import ViewTaskModal from "./components/ViewTaskModal";
+import DeleteTaskModal from "./components/DeleteTaskModal";
 
 const { RangePicker } = DatePicker;
 
@@ -26,37 +30,69 @@ type PagedResult<T> = {
 };
 
 export default function TasksPage() {
-  const { user } = useAuth();
+  const { user, hydrated } = useAuth();
   const qc = useQueryClient();
 
   const [createOpen, setCreateOpen] = useState(false);
 
+  // ✅ View modal
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewId, setViewId] = useState<string | null>(null);
+
+  // ✅ Edit modal
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  // ✅ Delete modal
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<TaskStatus | "All">("All");
-  const [priority, setPriority] = useState<TaskPriority | "All">("All");
-  const [dueRange, setDueRange] = useState<[string | null, string | null]>([null, null]);
+  // ✅ Search on submit (not on change)
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState(""); // applied search (used by query)
 
-  const [sortField, setSortField] = useState<SortField>("updatedAt");
-  const [sortOrder, setSortOrder] = useState<"ascend" | "descend">("descend");
+  // ✅ Draft filters (UI changes won't fetch)
+  const [statusInput, setStatusInput] = useState<TaskStatus | "All">("All");
+  const [priorityInput, setPriorityInput] = useState<TaskPriority | "All">("All");
+  const [dueRangeInput, setDueRangeInput] = useState<[string | null, string | null]>([null, null]);
+
+  // ✅ Applied filters (only these affect query)
+  const [statusApplied, setStatusApplied] = useState<TaskStatus | "All">("All");
+  const [priorityApplied, setPriorityApplied] = useState<TaskPriority | "All">("All");
+  const [dueRangeApplied, setDueRangeApplied] = useState<[string | null, string | null]>([null, null]);
+
+  // ✅ Controlled sorter state (server-side)
+  const DEFAULT_SORT_FIELD: SortField = "updatedAt";
+  const DEFAULT_SORT_ORDER: "ascend" | "descend" = "descend";
+
+  const [sortField, setSortField] = useState<SortField>(DEFAULT_SORT_FIELD);
+  const [sortOrder, setSortOrder] = useState<"ascend" | "descend">(DEFAULT_SORT_ORDER);
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const ownerUid = user?.uid;
 
-  // ✅ Normalize filters BEFORE query + key
-  const statusFilter: TaskStatus | undefined = status === "All" ? undefined : status;
-  const priorityFilter: TaskPriority | undefined = priority === "All" ? undefined : priority;
+  // ✅ Normalize filters BEFORE query + key (USING APPLIED FILTERS)
+  const statusFilter: TaskStatus | undefined = statusApplied === "All" ? undefined : statusApplied;
+  const priorityFilter: TaskPriority | undefined = priorityApplied === "All" ? undefined : priorityApplied;
 
-  const dueFrom = dueRange[0] ?? undefined;
-  const dueTo = dueRange[1] ?? undefined;
+  const dueFrom = dueRangeApplied[0] ?? undefined;
+  const dueTo = dueRangeApplied[1] ?? undefined;
+
+  const applySearch = () => {
+    setPage(1);
+    setSearch(searchInput.trim());
+    setStatusApplied(statusInput);
+    setPriorityApplied(priorityInput);
+    setDueRangeApplied(dueRangeInput);
+  };
 
   const queryKey = useMemo(
     () =>
       [
         "tasks",
-        ownerUid,
+        user?.uid ?? "anon",
         page,
         pageSize,
         search,
@@ -67,15 +103,14 @@ export default function TasksPage() {
         sortField,
         sortOrder,
       ] as const,
-    [ownerUid, page, pageSize, search, statusFilter, priorityFilter, dueFrom, dueTo, sortField, sortOrder]
+    [user?.uid, page, pageSize, search, statusFilter, priorityFilter, dueFrom, dueTo, sortField, sortOrder]
   );
 
   const { data, isLoading, isFetching, isError, error } = useQuery<PagedResult<Task>>({
     queryKey,
-    enabled: !!ownerUid,
+    enabled: hydrated && !!user?.uid,
     queryFn: () =>
       listTasks({
-        ownerUid: ownerUid!,
         page,
         pageSize,
         search,
@@ -89,23 +124,12 @@ export default function TasksPage() {
     placeholderData: keepPreviousData,
   });
 
-  // ✅ show query errors clearly
   useEffect(() => {
     if (isError) {
       console.error("listTasks error:", error);
       toast.error((error as any)?.message ?? "Failed to load tasks");
     }
   }, [isError, error]);
-
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => softDeleteTask(id),
-    onSuccess: () => {
-      toast.success("Task deleted");
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-      setSelectedRowKeys([]);
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
-  });
 
   const bulkDoneMut = useMutation({
     mutationFn: (ids: string[]) => bulkMarkDone(ids),
@@ -123,7 +147,7 @@ export default function TasksPage() {
       InProgress: { label: "In Progress", color: "processing" },
       Done: { label: "Done", color: "success" },
     };
-    const v = map[s];
+    const v = map[s ?? "Todo"];
     return <Tag color={v.color}>{v.label}</Tag>;
   };
 
@@ -133,17 +157,36 @@ export default function TasksPage() {
       Medium: { label: "Medium", color: "warning" },
       High: { label: "High", color: "error" },
     };
-    const v = map[p];
+    const v = map[p ?? "Medium"];
     return <Tag color={v.color}>{v.label}</Tag>;
   };
+
+  const openView = (id: string) => {
+    setViewId(id);
+    setViewOpen(true);
+  };
+
+  const openEdit = (id: string) => {
+    setEditId(id);
+    setEditOpen(true);
+  };
+
+  const openDelete = (id: string) => {
+    setDeleteId(id);
+    setDeleteOpen(true);
+  };
+
+  // ✅ Helper to bind AntD UI sort indicators to our state
+  const colSortOrder = (field: SortField) => (sortField === field ? sortOrder : null);
 
   const columns: ColumnsType<Task> = [
     {
       title: "Title",
       dataIndex: "title",
       sorter: true,
+      sortOrder: colSortOrder("title"),
       render: (v: string, row) => (
-        <div className="min-w-[220px]">
+        <div className="min-w-55">
           <div className="font-semibold text-(--text)">{v}</div>
           {row.description ? (
             <div className="mt-1 line-clamp-1 text-xs text-(--muted)">{row.description}</div>
@@ -153,12 +196,27 @@ export default function TasksPage() {
         </div>
       ),
     },
-    { title: "Status", dataIndex: "status", sorter: true, width: 140, render: (v: TaskStatus) => statusTag(v) },
-    { title: "Priority", dataIndex: "priority", sorter: true, width: 140, render: (v: TaskPriority) => priorityTag(v) },
+    {
+      title: "Status",
+      dataIndex: "status",
+      sorter: true,
+      sortOrder: colSortOrder("status"),
+      width: 140,
+      render: (v: TaskStatus) => statusTag(v),
+    },
+    {
+      title: "Priority",
+      dataIndex: "priority",
+      sorter: true,
+      sortOrder: colSortOrder("priority"),
+      width: 140,
+      render: (v: TaskPriority) => priorityTag(v),
+    },
     {
       title: "Due",
       dataIndex: "dueDate",
       sorter: true,
+      sortOrder: colSortOrder("dueDate"),
       width: 160,
       render: (v?: string | null) => (v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-(--muted)">—</span>),
     },
@@ -166,38 +224,26 @@ export default function TasksPage() {
       title: "Updated",
       dataIndex: "updatedAt",
       sorter: true,
+      sortOrder: colSortOrder("updatedAt"),
       width: 180,
-      render: (v: string) => <span className="text-(--muted)">{dayjs(v).format("YYYY-MM-DD HH:mm")}</span>,
+      render: (v: any) => <span className="text-(--muted)">{v ? dayjs(v).format("YYYY-MM-DD HH:mm") : "—"}</span>,
     },
     {
-      title: "",
+      title: "Actions",
       key: "actions",
       width: 170,
       render: (_, row) => (
         <Space>
           <Tooltip title="View">
-            <Button size="small" onClick={() => toast.info(`View: ${row.title}`)} icon={<Eye size={16} />} />
+            <Button size="small" onClick={() => openView(row.id)} icon={<Eye size={16} />} />
           </Tooltip>
 
-          <Tooltip title="Edit (demo)">
-            <Button size="small" onClick={() => toast.info("Next: open edit modal")} icon={<Pencil size={16} />} />
+          <Tooltip title="Edit">
+            <Button size="small" onClick={() => openEdit(row.id)} icon={<Pencil size={16} />} />
           </Tooltip>
 
           <Tooltip title="Delete">
-            <Button
-              size="small"
-              danger
-              onClick={() => {
-                Modal.confirm({
-                  title: "Delete task?",
-                  content: "This will soft-delete the task.",
-                  okText: "Delete",
-                  okButtonProps: { danger: true },
-                  onOk: () => deleteMut.mutate(row.id),
-                });
-              }}
-              icon={<Trash2 size={16} />}
-            />
+            <Button size="small" danger onClick={() => openDelete(row.id)} icon={<Trash2 size={16} />} />
           </Tooltip>
         </Space>
       ),
@@ -205,34 +251,32 @@ export default function TasksPage() {
   ];
 
   const onTableChange = (p: TablePaginationConfig, _filters: any, sorter: SorterResult<Task> | SorterResult<Task>[]) => {
+    // ✅ pagination (server-side)
     setPage(p.current ?? 1);
     setPageSize(p.pageSize ?? 10);
 
+    // ✅ sorting (server-side)
     const s = Array.isArray(sorter) ? sorter[0] : sorter;
 
-    // if user clears sorting, keep current
+    // When user sorts: s.field + s.order exist
     if (s?.field && s?.order) {
       setSortField(s.field as SortField);
       setSortOrder(s.order as any);
+      setPage(1); // optional: jump to first page when sorting changes
+      return;
+    }
+
+    // When user clears sort (clicking until no order): s.order becomes undefined
+    // Keep server deterministic: fallback to default sort
+    if (s?.field && !s.order) {
+      setSortField(DEFAULT_SORT_FIELD);
+      setSortOrder(DEFAULT_SORT_ORDER);
+      setPage(1);
     }
   };
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
-
-  // ✅ Debug (keep for now)
-  useEffect(() => {
-    console.log("Tasks debug:", {
-      ownerUid,
-      isLoading,
-      isFetching,
-      isError,
-      total,
-      itemsLen: items.length,
-      firstItem: items[0],
-      queryKey,
-    });
-  }, [ownerUid, isLoading, isFetching, isError, total, items, queryKey]);
 
   return (
     <div className="space-y-4">
@@ -263,20 +307,24 @@ export default function TasksPage() {
             <Input
               allowClear
               placeholder="Search title/description..."
-              value={search}
+              value={searchInput}
               onChange={(e) => {
-                setPage(1);
-                setSearch(e.target.value);
+                const v = e.target.value;
+                setSearchInput(v);
+
+                // ✅ if user clears using X -> clear applied search too
+                if (!v) {
+                  setPage(1);
+                  setSearch("");
+                }
               }}
-              className="max-w-[320px]"
+              onPressEnter={applySearch}
+              className="max-w-50"
             />
 
             <Select
-              value={status}
-              onChange={(v) => {
-                setPage(1);
-                setStatus(v);
-              }}
+              value={statusInput}
+              onChange={(v) => setStatusInput(v)}
               style={{ width: 160 }}
               options={[
                 { value: "All", label: "All Status" },
@@ -287,11 +335,8 @@ export default function TasksPage() {
             />
 
             <Select
-              value={priority}
-              onChange={(v) => {
-                setPage(1);
-                setPriority(v);
-              }}
+              value={priorityInput}
+              onChange={(v) => setPriorityInput(v)}
               style={{ width: 170 }}
               options={[
                 { value: "All", label: "All Priority" },
@@ -302,10 +347,13 @@ export default function TasksPage() {
             />
 
             <RangePicker
+              value={[
+                dueRangeInput[0] ? dayjs(dueRangeInput[0]) : null,
+                dueRangeInput[1] ? dayjs(dueRangeInput[1]) : null,
+              ]}
               onChange={(vals) => {
-                setPage(1);
-                if (!vals || vals.length !== 2) return setDueRange([null, null]);
-                setDueRange([
+                if (!vals || vals.length !== 2) return setDueRangeInput([null, null]);
+                setDueRangeInput([
                   vals[0] ? vals[0].startOf("day").toISOString() : null,
                   vals[1] ? vals[1].endOf("day").toISOString() : null,
                 ]);
@@ -313,20 +361,34 @@ export default function TasksPage() {
             />
           </div>
 
-          <Button
-            onClick={() => {
-              setSearch("");
-              setStatus("All");
-              setPriority("All");
-              setDueRange([null, null]);
-              setSortField("updatedAt");
-              setSortOrder("descend");
-              setPage(1);
-              setSelectedRowKeys([]);
-            }}
-          >
-            Reset
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="primary" onClick={applySearch}>
+              Search
+            </Button>
+
+            <Button
+              onClick={() => {
+                setSearchInput("");
+                setSearch("");
+
+                setStatusInput("All");
+                setPriorityInput("All");
+                setDueRangeInput([null, null]);
+
+                setStatusApplied("All");
+                setPriorityApplied("All");
+                setDueRangeApplied([null, null]);
+
+                setSortField(DEFAULT_SORT_FIELD);
+                setSortOrder(DEFAULT_SORT_ORDER);
+
+                setPage(1);
+                setSelectedRowKeys([]);
+              }}
+            >
+              Reset
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -337,7 +399,18 @@ export default function TasksPage() {
           columns={columns}
           dataSource={items}
           onChange={onTableChange}
-          pagination={{ current: page, pageSize, total, showSizeChanger: true }}
+        pagination={{
+  current: page,
+  pageSize,
+  total,
+  showSizeChanger: false,
+  placement: ["bottomCenter"],
+  showTotal: (t, range) => (
+    <span className="text-(--muted) text-sm">
+      {range[0]}-{range[1]} of {t}
+    </span>
+  ),
+}}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
           locale={{
             emptyText: (
@@ -352,6 +425,36 @@ export default function TasksPage() {
 
       {/* ✅ Create Task Modal */}
       <AddTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      {/* ✅ View Task Modal */}
+      <ViewTaskModal
+        open={viewOpen}
+        taskId={viewId}
+        onClose={() => {
+          setViewOpen(false);
+          setViewId(null);
+        }}
+      />
+
+      {/* ✅ Edit Task Modal */}
+      <EditTaskModal
+        open={editOpen}
+        taskId={editId}
+        onClose={() => {
+          setEditOpen(false);
+          setEditId(null);
+        }}
+      />
+
+      {/* ✅ Delete Task Modal */}
+      <DeleteTaskModal
+        open={deleteOpen}
+        taskId={deleteId}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteId(null);
+        }}
+      />
     </div>
   );
 }

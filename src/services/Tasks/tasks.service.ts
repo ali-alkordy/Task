@@ -1,25 +1,9 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  addDoc,
-  updateDoc,
-  serverTimestamp,
-  Timestamp,
-  QueryConstraint,
-} from "firebase/firestore";
-import { db } from "./../../api/firebase";
-import type { Task, TaskPriority, TaskStatus } from "./../../types/task";
+// src/services/Tasks/tasks.service.ts
+import { axiosInstance, functionsConfig } from "../../api/axios";
+import type { Task, TaskPriority, TaskStatus } from "../../types/task";
 
 export type TasksQuery = {
-  ownerUid: string;
-
-  page: number; // 1-based
+  page: number;
   pageSize: number;
 
   sortField?: "createdAt" | "updatedAt" | "dueDate" | "title" | "priority" | "status";
@@ -27,135 +11,74 @@ export type TasksQuery = {
 
   search?: string;
 
-  // ✅ in the page you already pass undefined when "All"
-  status?: TaskStatus;
-  priority?: TaskPriority;
+  status?: TaskStatus; // undefined = ALL
+  priority?: TaskPriority; // undefined = ALL
 
-  dueFrom?: string; // ISO
-  dueTo?: string; // ISO
+  dueFrom?: string;
+  dueTo?: string;
 };
 
-export type PagedResult<T> = {
-  items: T[];
-  total: number;
-};
+export type PagedResult<T> = { items: T[]; total: number };
 
-function tsToIso(v: any): string {
-  if (!v) return "";
-  if (typeof v === "string") return v; // your Firestore dueDate is string
-  if (v instanceof Timestamp) return v.toDate().toISOString();
-  if (v?.toDate) return v.toDate().toISOString();
-  return "";
-}
+const DEFAULT_SORT_FIELD: NonNullable<TasksQuery["sortField"]> = "updatedAt";
+const DEFAULT_SORT_ORDER: NonNullable<TasksQuery["sortOrder"]> = "descend";
 
-function normalizeTask(id: string, data: any): Task {
-  return {
-    id,
-    title: data.title ?? "",
-    description: data.description ?? "",
-    status: (data.status ?? "Todo") as TaskStatus,
-    priority: (data.priority ?? "Medium") as TaskPriority,
-    dueDate: data.dueDate ? tsToIso(data.dueDate) : null,
-    createdAt: tsToIso(data.createdAt),
-    updatedAt: tsToIso(data.updatedAt),
-    ownerUid: data.ownerUid ?? "",
-    isDeleted: data.isDeleted === true, // ✅ missing => false
+export async function listTasks(q: TasksQuery): Promise<PagedResult<Task>> {
+  const params: TasksQuery = {
+    ...q,
+    sortField: q.sortField ?? DEFAULT_SORT_FIELD,
+    sortOrder: q.sortOrder ?? DEFAULT_SORT_ORDER,
+    search: (q.search ?? "").trim() || undefined,
+    dueFrom: q.dueFrom || undefined,
+    dueTo: q.dueTo || undefined,
   };
-}
 
-export async function listTasks(qp: TasksQuery): Promise<PagedResult<Task>> {
-  const base = collection(db, "tasks");
+  const res = await axiosInstance.get<PagedResult<Task>>("/listTasks", {
+    ...functionsConfig(),
+    params,
+  });
 
-  const constraints: QueryConstraint[] = [
-    where("ownerUid", "==", qp.ownerUid),
-
-    // ✅ your docs DO have isDeleted, so this is OK.
-    // If you ever have old docs missing it, remove this line and filter client-side.
-    where("isDeleted", "==", false),
-  ];
-
-  if (qp.status) constraints.push(where("status", "==", qp.status));
-  if (qp.priority) constraints.push(where("priority", "==", qp.priority));
-
-  const sortField = qp.sortField ?? "updatedAt";
-  const sortOrder = qp.sortOrder ?? "descend";
-  constraints.push(orderBy(sortField, sortOrder === "ascend" ? "asc" : "desc"));
-
-  const fetchSize = Math.min(200, qp.pageSize * 6);
-  constraints.push(limit(fetchSize));
-
-  const snap = await getDocs(query(base, ...constraints));
-  let items = snap.docs.map((d) => normalizeTask(d.id, d.data()));
-
-  // Search
-  const s = (qp.search ?? "").trim().toLowerCase();
-  if (s) {
-    items = items.filter((t) => (`${t.title} ${t.description ?? ""}`).toLowerCase().includes(s));
-  }
-
-  // Due date range
-  if (qp.dueFrom || qp.dueTo) {
-    const from = qp.dueFrom ? new Date(qp.dueFrom).getTime() : Number.NEGATIVE_INFINITY;
-    const to = qp.dueTo ? new Date(qp.dueTo).getTime() : Number.POSITIVE_INFINITY;
-
-    items = items.filter((t) => {
-      if (!t.dueDate) return false;
-      const ms = new Date(t.dueDate).getTime();
-      return ms >= from && ms <= to;
-    });
-  }
-
-  const total = items.length;
-
-  const start = (qp.page - 1) * qp.pageSize;
-  const end = start + qp.pageSize;
-
-  return { items: items.slice(start, end), total };
+  return res.data;
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
-  const ref = doc(db, "tasks", id);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  return normalizeTask(snap.id, snap.data());
-}
-
-export async function createTask(payload: Partial<Task> & { ownerUid: string }): Promise<string> {
-  const ref = await addDoc(collection(db, "tasks"), {
-    title: payload.title ?? "",
-    description: payload.description ?? "",
-    status: payload.status ?? "Todo",
-    priority: payload.priority ?? "Medium",
-
-    // ✅ keep as string like your console ("2025-12-31") OR ISO
-    dueDate: payload.dueDate ?? null,
-
-    ownerUid: payload.ownerUid, // ✅ MUST be user.uid
-    isDeleted: false,
-
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const res = await axiosInstance.get<Task>("/getTaskById", {
+    ...functionsConfig(),
+    params: { id },
   });
-  return ref.id;
+  return res.data ?? null;
 }
 
-export async function updateTask(id: string, patch: Partial<Task>): Promise<void> {
-  const ref = doc(db, "tasks", id);
-  await updateDoc(ref, {
-    ...(patch.title !== undefined ? { title: patch.title } : {}),
-    ...(patch.description !== undefined ? { description: patch.description } : {}),
-    ...(patch.status !== undefined ? { status: patch.status } : {}),
-    ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
-    ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate ?? null } : {}),
-    updatedAt: serverTimestamp(),
+export async function createTask(payload: {
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string | null;
+}): Promise<string> {
+  const res = await axiosInstance.post<{ id: string }>("/createTask", payload, {
+    ...functionsConfig(),
+  });
+  return res.data.id;
+}
+
+export async function updateTask(
+  id: string,
+  patch: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "dueDate">>
+): Promise<void> {
+  await axiosInstance.patch("/updateTask", patch, {
+    ...functionsConfig(),
+    params: { id },
   });
 }
 
 export async function softDeleteTask(id: string): Promise<void> {
-  const ref = doc(db, "tasks", id);
-  await updateDoc(ref, { isDeleted: true, updatedAt: serverTimestamp() });
+  await axiosInstance.delete("/softDeleteTask", {
+    ...functionsConfig(),
+    params: { id },
+  });
 }
 
 export async function bulkMarkDone(ids: string[]): Promise<void> {
-  await Promise.all(ids.map((id) => updateTask(id, { status: "Done" })));
+  await axiosInstance.post("/bulkMarkDone", { ids }, { ...functionsConfig() });
 }

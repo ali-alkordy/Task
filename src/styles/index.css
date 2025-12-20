@@ -7,6 +7,8 @@ html, body {
   color: var(--text);
 }
 
+/* note am using !important in antd do manually adjust the styles of the library */
+
 /* Fix Chrome/Edge autofill (works in both dark + light) */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -19,4 +21,211 @@ select:-webkit-autofill {
 
   box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
   border: 1px solid var(--input-border) !important;
+}
+
+
+
+
+/* =========================
+   antd DatePicker (pop up adjustmen ui)
+   ========================= */
+
+.task-date-popup.ant-picker-dropdown {
+  z-index: 2000; /* keep above modal */
+}
+
+.task-date-popup .ant-picker-panel-container {
+  background: rgba(var(--bg-rgb), 0.95) !important; /* solid enough */
+  border: 1px solid var(--panel-border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow-lg) !important;
+  overflow: hidden;
+}
+
+/* header / body / footer should not reintroduce white/transparent backgrounds */
+.task-date-popup .ant-picker-header,
+.task-date-popup .ant-picker-body,
+.task-date-popup .ant-picker-footer {
+  background: transparent !important;
+  border-color: var(--panel-border) !important;
+}
+
+.task-date-popup .ant-picker-header button {
+  color: var(--text) !important;
+}
+
+.task-date-popup .ant-picker-content th {
+  color: var(--muted) !important;
+}
+
+/* day numbers */
+.task-date-popup .ant-picker-cell .ant-picker-cell-inner {
+  color: var(--text) !important;
+  border-radius: 10px;
+}
+
+.task-date-popup .ant-picker-cell-disabled .ant-picker-cell-inner {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* hover */
+.task-date-popup .ant-picker-cell-in-view .ant-picker-cell-inner:hover {
+  background: rgba(var(--glow-rgb), 0.18) !important;
+}
+
+/* today outline */
+.task-date-popup
+  .ant-picker-cell-in-view.ant-picker-cell-today
+  .ant-picker-cell-inner::before {
+  border-color: rgba(var(--glow-rgb), 0.85) !important;
+}
+
+/* selected day */
+.task-date-popup
+  .ant-picker-cell-in-view.ant-picker-cell-selected
+  .ant-picker-cell-inner {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+/* optional: make the "Today" link readable */
+.task-date-popup .ant-picker-now-btn {
+  color: rgba(var(--glow-rgb), 0.95) !important;
+}
+
+/* =========================
+   AntD: Glass overlays everywhere
+   (Dropdown / Select / DatePicker / Table filters / Popover / Tooltip)
+   ========================= */
+
+/* The actual popup surfaces */
+.ant-dropdown .ant-dropdown-menu,
+.ant-select-dropdown,
+.ant-picker-dropdown .ant-picker-panel-container,
+.ant-table-filter-dropdown,
+.ant-popover .ant-popover-inner,
+.ant-tooltip .ant-tooltip-inner {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--panel-border) !important;
+  border-radius: var(--glass-radius) !important;
+
+  box-shadow: var(--shadow-lg) !important;
+
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+
+  overflow: hidden;
+}
+
+/* Ensure inner sections don’t re-add white backgrounds */
+.ant-picker-dropdown .ant-picker-header,
+.ant-picker-dropdown .ant-picker-body,
+.ant-picker-dropdown .ant-picker-footer,
+.ant-table-filter-dropdown .ant-dropdown-menu {
+  background: transparent !important;
+  border-color: var(--panel-border) !important;
+}
+
+/* Text colors */
+.ant-dropdown-menu-item,
+.ant-dropdown-menu-submenu-title,
+.ant-dropdown-menu-title-content,
+.ant-select-item,
+.ant-select-item-option-content,
+.ant-picker-header button,
+.ant-picker-content th,
+.ant-picker-cell .ant-picker-cell-inner,
+.ant-table-filter-dropdown-btns .ant-btn {
+  color: var(--text) !important;
+}
+
+/* Hover states */
+.ant-dropdown-menu-item:hover,
+.ant-dropdown-menu-submenu-title:hover,
+.ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.ant-select-item-option:hover {
+  background: var(--panel-hover) !important;
+}
+
+/* Selected option */
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(var(--glow-rgb), 0.14) !important;
+}
+
+/* Divider */
+.ant-dropdown-menu-item-divider {
+  background: var(--panel-border) !important;
+}
+
+/* Danger item (Logout) */
+.ant-dropdown-menu-item-danger {
+  color: var(--danger-text) !important;
+}
+.ant-dropdown-menu-item-danger:hover {
+  background: var(--danger-bg) !important;
+  border: 1px solid var(--danger-border) !important;
+}
+
+/* Disabled items */
+.ant-dropdown-menu-item-disabled,
+.ant-select-item-option-disabled {
+  color: rgba(var(--bg-rgb), 0.45) !important;
+  opacity: 0.7;
+}
+/* =========================
+   DatePicker: end-of-month / outside-month cells
+   (days from prev/next month shown in the grid)
+   ========================= */
+
+/* Out-of-month numbers (not in current month view) */
+.ant-picker-dropdown .ant-picker-cell:not(.ant-picker-cell-in-view) .ant-picker-cell-inner {
+  color: rgba(255, 255, 255, 0.32) !important;
+}
+
+/* Light mode: out-of-month should be dark-muted (not white) */
+:root[data-theme="light"] .ant-picker-dropdown .ant-picker-cell:not(.ant-picker-cell-in-view) .ant-picker-cell-inner {
+  color: rgba(15, 23, 42, 0.35) !important;
+}
+
+/* Don’t glow/hover highlight out-of-month dates */
+.ant-picker-dropdown .ant-picker-cell:not(.ant-picker-cell-in-view) .ant-picker-cell-inner:hover {
+  background: transparent !important;
+}
+
+/* Optional: if AntD adds a grey bg behind out-of-month cells in some modes */
+.ant-picker-dropdown .ant-picker-cell:not(.ant-picker-cell-in-view)::before {
+  background: transparent !important;
+}
+
+
+/* =========================
+   RangePicker: nicer start/end pills (especially at month boundaries)
+   ========================= */
+
+/* In-range background */
+.ant-picker-dropdown .ant-picker-cell-in-view.ant-picker-cell-in-range::before {
+  background: rgba(var(--glow-rgb), 0.12) !important;
+}
+
+/* Range start/end cells */
+.ant-picker-dropdown .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+.ant-picker-dropdown .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+}
+
+/* Make sure the range highlight doesn’t look broken on start/end */
+.ant-picker-dropdown .ant-picker-cell-in-view.ant-picker-cell-range-start::before,
+.ant-picker-dropdown .ant-picker-cell-in-view.ant-picker-cell-range-end::before {
+  background: rgba(var(--glow-rgb), 0.12) !important;
+}
+
+
+/* =========================
+   IMPORTANT: keep task-date-popup more solid than global glass
+   (your global .ant-picker-dropdown rule was overriding it)
+   ========================= */
+.task-date-popup.ant-picker-dropdown .ant-picker-panel-container {
+  background: rgba(var(--bg-rgb), 0.95) !important;
 }

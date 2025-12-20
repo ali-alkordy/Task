@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import  { useEffect } from "react";
 import { DatePicker, Form, Input, Modal, Select } from "antd";
 import type { Dayjs } from "dayjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,9 +36,8 @@ export default function AddTaskModal({ open, onClose }: Props) {
         description: (values.description ?? "").trim(),
         status: values.status,
         priority: values.priority,
-        // Keep same style you used in Firestore console
         dueDate: values.dueDate ? values.dueDate.format("YYYY-MM-DD") : null,
-      });
+      } as any);
     },
     onSuccess: () => {
       toast.success("Task created ✅");
@@ -61,54 +60,41 @@ export default function AddTaskModal({ open, onClose }: Props) {
   }, [open, form]);
 
   return (
-    <Modal
-      open={open}
-      centered
-      width={620}
-      destroyOnClose
-      rootClassName="task-modal" // ✅ for scoped CSS
-      title={<span className="task-modal__title">Add Task</span>}
-      okText="Create"
-      cancelText="Cancel"
-      confirmLoading={createMut.isPending}
-      onOk={() => form.submit()}
-      onCancel={() => {
-        if (!createMut.isPending) onClose();
-      }}
-      // ✅ make overlay darker + slight blur (background only)
-      maskStyle={{
-        background: "rgba(var(--bg-rgb), 0.72)",
-        backdropFilter: "blur(6px)",
-      }}
-      styles={{
-        // ✅ IMPORTANT: use panel-elevated (more solid) + strong shadow
-        content: {
-          background: "var(--panel-elevated)",
-          border: "1px solid var(--panel-border)",
-          borderRadius: 18,
-          boxShadow: "var(--shadow-lg)",
-          backdropFilter: "none",
-        },
-        header: {
-          background: "transparent",
-          borderBottom: "1px solid var(--panel-border)",
-          padding: "14px 18px",
-        },
-        body: {
-          padding: "16px 18px",
-        },
-        footer: {
-          borderTop: "1px solid var(--panel-border)",
-          padding: "12px 18px",
-        },
-      }}
-      okButtonProps={{
-        className: "task-modal__ok",
-      }}
-      cancelButtonProps={{
-        className: "task-modal__cancel",
-      }}
-    >
+<Modal
+  open={open}
+  centered
+  width={620}
+  destroyOnHidden
+  rootClassName="task-modal"
+  title={<span className="task-modal__title">Add Task</span>}
+  okText="Create"
+  cancelText="Cancel"
+  confirmLoading={createMut.isPending}
+  onOk={() => form.submit()}
+  onCancel={() => {
+    if (!createMut.isPending) onClose();
+  }}
+  styles={{
+    mask: {
+      background: "rgba(var(--bg-rgb), 0.72)",
+      backdropFilter: "blur(6px)",
+    },
+    body: {
+      padding: "16px 18px",
+      background: "transparent",
+    },
+  }}
+  style={{
+    background: "var(--modal-surface)",
+    border: "1px solid var(--panel-border)",
+    borderRadius: 18,
+    boxShadow: "var(--shadow-lg)",
+    backdropFilter: `blur(var(--glass-blur))`,
+  }}
+  okButtonProps={{ className: "task-modal__ok" }}
+  cancelButtonProps={{ className: "task-modal__cancel" }}
+>
+
       <p className="task-modal__subtitle">
         Create a new task with status, priority and an optional due date.
       </p>
@@ -160,9 +146,13 @@ export default function AddTaskModal({ open, onClose }: Props) {
           </Form.Item>
         </div>
 
-        <Form.Item label={<span className="task-modal__label">Due date</span>} name="dueDate">
-          <DatePicker className="w-full" placeholder="Select date (optional)" />
-        </Form.Item>
+  <Form.Item label={<span className="task-modal__label">Due date</span>} name="dueDate">
+  <DatePicker
+    className="w-full"
+    placeholder="Select date (optional)"
+    classNames={{ popup: { root: "task-date-popup" } }}
+  />
+</Form.Item>
       </Form>
     </Modal>
   );

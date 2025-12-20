@@ -1,5 +1,6 @@
+// src/components/layout/Navbar.tsx (or wherever your Navbar lives)
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { LogOut, ListTodo, Palette, User, Settings } from "lucide-react";
+import { LogOut, ListTodo, Palette, User, Settings, BarChart3 } from "lucide-react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 
@@ -21,13 +22,9 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
 
-  // Safe fallback for theme
   const safeTheme: ThemeName =
-    theme && Object.prototype.hasOwnProperty.call(THEME_META, theme)
-      ? theme
-      : "ocean";
+    theme && Object.prototype.hasOwnProperty.call(THEME_META, theme) ? theme : "ocean";
 
-  // derive dark mode flag from resolved theme
   const isDark = safeTheme !== "light";
 
   const onLogout = async () => {
@@ -36,26 +33,17 @@ export default function Navbar() {
     navigate("/auth", { replace: true });
   };
 
-  // Theme dropdown items
-  const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map(
-    (key) => ({
-      key,
-      label: (
-        <div className="flex items-center gap-2 px-1 py-0.5">
-          <span
-            className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)}
-          />
-          <span className="text-(--text)">{THEME_META[key].label}</span>
-          {safeTheme === key && (
-            <span className="ml-auto text-xs text-(--muted)">Active</span>
-          )}
-        </div>
-      ),
-      onClick: () => setTheme(key),
-    })
-  );
+const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map((key) => ({
+  key,
+  label: (
+    <div className="flex items-center gap-2 px-1 py-0.5">
+      <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
+      <span className="text-(--text)">{THEME_META[key].label}</span>
+      {safeTheme === key && <span className="ml-auto text-xs text-(--muted)">Active</span>}
+    </div>
+  ),
+}));
 
-  // User dropdown items
   const userItems: MenuProps["items"] = [
     {
       key: "email",
@@ -63,9 +51,7 @@ export default function Navbar() {
       label: (
         <div className="px-1 py-0.5">
           <div className="text-xs text-(--muted)">Signed in as</div>
-          <div className="text-sm font-medium text-(--text)">
-            {user?.email || "—"}
-          </div>
+          <div className="text-sm font-medium text-(--text)">{user?.email || "—"}</div>
         </div>
       ),
     },
@@ -78,7 +64,7 @@ export default function Navbar() {
           <span className="text-(--text)">Settings</span>
         </div>
       ),
-      onClick: () => navigate("/settings"), 
+      onClick: () => navigate("/settings"),
     },
     {
       key: "logout",
@@ -93,41 +79,40 @@ export default function Navbar() {
     },
   ];
 
-  // Shared dropdown overlay styles
-const dropdownOverlayClass = cn(
-  "theme-dropdown-overlay",
-  "[&_.ant-dropdown-menu]:!min-w-[220px]",
-  "[&_.ant-dropdown-menu]:!rounded-xl",
-  "[&_.ant-dropdown-menu]:!p-1",
-  "[&_.ant-dropdown-menu]:!bg-[color:var(--panel-elevated)]",
-  "[&_.ant-dropdown-menu]:!border [&_.ant-dropdown-menu]:!border-[color:var(--panel-border)]",
-  "[&_.ant-dropdown-menu]:!shadow-[var(--shadow-lg)]",
-  "[&_.ant-dropdown-menu]:!backdrop-blur-md",
+  const dropdownOverlayClass = cn(
+    "theme-dropdown-overlay",
+    "[&_.ant-dropdown-menu]:!min-w-[220px]",
+    "[&_.ant-dropdown-menu]:!rounded-xl",
+    "[&_.ant-dropdown-menu]:!p-1",
+    "[&_.ant-dropdown-menu]:!bg-[color:var(--panel-elevated)]",
+    "[&_.ant-dropdown-menu]:!border [&_.ant-dropdown-menu]:!border-[color:var(--panel-border)]",
+    "[&_.ant-dropdown-menu]:!shadow-[var(--shadow-lg)]",
+    "[&_.ant-dropdown-menu]:!backdrop-blur-md",
 
-  "[&_.ant-dropdown-menu-item]:!rounded-lg",
-  "[&_.ant-dropdown-menu-item]:!text-[color:var(--text)]",
-  "[&_.ant-dropdown-menu-item]:!transition-all",
-  "[&_.ant-dropdown-menu-item:hover]:!bg-[color:var(--panel-hover)]",
+    "[&_.ant-dropdown-menu-item]:!rounded-lg",
+    "[&_.ant-dropdown-menu-item]:!text-[color:var(--text)]",
+    "[&_.ant-dropdown-menu-item]:!transition-all",
+    "[&_.ant-dropdown-menu-item:hover]:!bg-[color:var(--panel-hover)]",
 
-  // ✅ Danger item styling (Logout)
-  "[&_.ant-dropdown-menu-item-danger]:!text-[color:var(--danger-text)]",
-  "[&_.ant-dropdown-menu-item-danger:hover]:!bg-[color:var(--danger-bg)]",
-  "[&_.ant-dropdown-menu-item-danger:hover]:!text-[color:var(--danger-text)]",
-  "[&_.ant-dropdown-menu-item-danger:hover]:!border [&_.ant-dropdown-menu-item-danger:hover]:!border-[color:var(--danger-border)]",
+    "[&_.ant-dropdown-menu-item-danger]:!text-[color:var(--danger-text)]",
+    "[&_.ant-dropdown-menu-item-danger:hover]:!bg-[color:var(--danger-bg)]",
+    "[&_.ant-dropdown-menu-item-danger:hover]:!text-[color:var(--danger-text)]",
+    "[&_.ant-dropdown-menu-item-danger:hover]:!border [&_.ant-dropdown-menu-item-danger:hover]:!border-[color:var(--danger-border)]",
 
-  // divider
-  "[&_.ant-dropdown-menu-item-divider]:!my-1 [&_.ant-dropdown-menu-item-divider]:!bg-[color:var(--panel-border)]"
-);
+    "[&_.ant-dropdown-menu-item-divider]:!my-1 [&_.ant-dropdown-menu-item-divider]:!bg-[color:var(--panel-border)]"
+  );
 
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      "rounded-lg px-3 py-2 text-sm font-medium transition-all inline-flex items-center gap-2",
+      "text-(--muted) hover:bg-(--panel) hover:text-(--text)",
+      isActive && "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)"
+    );
 
   return (
     <header className="sticky top-0 z-50 border-b border-(--panel-border) bg-(--bg)/95 backdrop-blur-sm shadow-(--shadow-sm)">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        {/* Logo */}
-        <Link
-          to="/tasks"
-          className="flex items-center gap-2 text-(--text) transition-opacity hover:opacity-80"
-        >
+        <Link to="/tasks" className="flex items-center gap-2 text-(--text) transition-opacity hover:opacity-80">
           <span className="rounded-lg bg-(--panel) p-2 border border-(--panel-border) shadow-(--shadow-sm)">
             <ListTodo size={18} />
           </span>
@@ -135,33 +120,30 @@ const dropdownOverlayClass = cn(
         </Link>
 
         <nav className="flex items-center gap-2">
-          {/* Tasks Nav Link */}
-          <NavLink
-            to="/tasks"
-            className={({ isActive }) =>
-              cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                "text-(--muted) hover:bg-(--panel) hover:text-(--text)",
-                isActive &&
-                  "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)"
-              )
-            }
-          >
+          <NavLink to="/tasks" className={navLinkClass}>
+            <ListTodo size={16} />
             Tasks
           </NavLink>
 
-          {/* Theme Chooser Dropdown */}
-          <Dropdown
-            menu={{ items: themeItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-            overlayClassName={cn(
-              dropdownOverlayClass,
-              isDark
-                ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110"
-                : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
-            )}
-          >
+          {/* ✅ NEW: Statistics */}
+          <NavLink to="/statistics" className={navLinkClass}>
+            <BarChart3 size={16} />
+            Statistics
+          </NavLink>
+
+       <Dropdown
+  menu={{ items: themeItems }}
+  trigger={["click"]}
+  placement="bottomRight"
+  classNames={{
+    root: cn(
+      dropdownOverlayClass,
+      isDark
+        ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110"
+        : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
+    ),
+  }}
+>
             <button
               type="button"
               className={cn(
@@ -178,16 +160,14 @@ const dropdownOverlayClass = cn(
             </button>
           </Dropdown>
 
-          {/* Divider */}
           <div className="mx-2 hidden h-6 w-px bg-(--panel-border) sm:block" />
 
-          {/* User Dropdown (Avatar button) */}
           <Dropdown
-            menu={{ items: userItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-            overlayClassName={dropdownOverlayClass}
-          >
+  menu={{ items: userItems }}
+  trigger={["click"]}
+  placement="bottomRight"
+  classNames={{ root: dropdownOverlayClass }}
+>
             <button
               type="button"
               className={cn(
