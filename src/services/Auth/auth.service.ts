@@ -1,6 +1,7 @@
 // src/services/Auth/auth.service.ts
 import { axiosInstance, functionsConfig } from "../../api/axios";
 import type { AuthUser } from "../../context/AuthContext";
+import Cookies from "js-cookie";
 
 const KEY_ACCESS = "tasks:accessToken";
 
@@ -9,19 +10,24 @@ const OLD_KEY_ID = "tasks:idToken";
 const OLD_KEY_REFRESH = "tasks:refreshToken";
 
 function saveAccessToken(accessToken: string) {
-  localStorage.setItem(KEY_ACCESS, accessToken);
+  Cookies.set(KEY_ACCESS, accessToken, {
+    path: "/",
+    sameSite: "lax",
+    secure: window.location.protocol === "https:",
+    // expires: 7, // uncomment if you want it to persist 7 days (otherwise session cookie)
+  });
 
   // cleanup old tokens (optional)
-  localStorage.removeItem(OLD_KEY_ID);
-  localStorage.removeItem(OLD_KEY_REFRESH);
+  Cookies.remove(OLD_KEY_ID, { path: "/" });
+  Cookies.remove(OLD_KEY_REFRESH, { path: "/" });
 }
 
 function clearAccessToken() {
-  localStorage.removeItem(KEY_ACCESS);
+  Cookies.remove(KEY_ACCESS, { path: "/" });
 }
 
 function readAccessToken() {
-  return localStorage.getItem(KEY_ACCESS);
+  return Cookies.get(KEY_ACCESS) ?? null;
 }
 
 // ✅ decode JWT payload (works for your API JWT and Firebase idToken)

@@ -1,4 +1,4 @@
-// src/components/layout/Navbar.tsx (or wherever your Navbar lives)
+// src/components/layout/Navbar.tsx
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LogOut, ListTodo, Palette, User, Settings, BarChart3 } from "lucide-react";
 import { Dropdown } from "antd";
@@ -33,16 +33,20 @@ export default function Navbar() {
     navigate("/auth", { replace: true });
   };
 
-const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map((key) => ({
-  key,
-  label: (
-    <div className="flex items-center gap-2 px-1 py-0.5">
-      <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
-      <span className="text-(--text)">{THEME_META[key].label}</span>
-      {safeTheme === key && <span className="ml-auto text-xs text-(--muted)">Active</span>}
-    </div>
-  ),
-}));
+  const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map((key) => ({
+    key,
+    label: (
+      <div className="flex items-center gap-2 px-1 py-0.5">
+        <span className={cn("h-2.5 w-2.5 rounded-full", THEME_META[key].dot)} />
+        <span className="text-[color:var(--text)]">{THEME_META[key].label}</span>
+        {safeTheme === key && (
+          <span className="ml-auto text-xs text-[color:var(--muted)]">Active</span>
+        )}
+      </div>
+    ),
+  }));
+
+  const onThemeClick: MenuProps["onClick"] = ({ key }) => setTheme(key as ThemeName);
 
   const userItems: MenuProps["items"] = [
     {
@@ -50,8 +54,8 @@ const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).
       disabled: true,
       label: (
         <div className="px-1 py-0.5">
-          <div className="text-xs text-(--muted)">Signed in as</div>
-          <div className="text-sm font-medium text-(--text)">{user?.email || "—"}</div>
+          <div className="text-xs text-[color:var(--muted)]">Signed in as</div>
+          <div className="text-sm font-medium text-[color:var(--text)]">{user?.email || "—"}</div>
         </div>
       ),
     },
@@ -61,7 +65,7 @@ const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).
       label: (
         <div className="flex items-center gap-2 px-1 py-0.5">
           <Settings size={16} />
-          <span className="text-(--text)">Settings</span>
+          <span className="text-[color:var(--text)]">Settings</span>
         </div>
       ),
       onClick: () => navigate("/settings"),
@@ -105,18 +109,22 @@ const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
       "rounded-lg px-3 py-2 text-sm font-medium transition-all inline-flex items-center gap-2",
-      "text-(--muted) hover:bg-(--panel) hover:text-(--text)",
-      isActive && "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)"
+      "text-[color:var(--muted)] hover:bg-[color:var(--panel)] hover:text-[color:var(--text)]",
+      isActive &&
+        "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]"
     );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-(--panel-border) bg-(--bg)/95 backdrop-blur-sm shadow-(--shadow-sm)">
+    <header className="sticky top-0 z-50 border-b border-[color:var(--panel-border)] bg-[rgba(var(--bg-rgb),0.95)] backdrop-blur-sm shadow-[var(--shadow-sm)]">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link to="/tasks" className="flex items-center gap-2 text-(--text) transition-opacity hover:opacity-80">
-          <span className="rounded-lg bg-(--panel) p-2 border border-(--panel-border) shadow-(--shadow-sm)">
+        <Link
+          to="/tasks"
+          className="flex items-center gap-2 text-[color:var(--text)] transition-opacity hover:opacity-80"
+        >
+          <span className="rounded-lg bg-[color:var(--panel)] p-2 border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]">
             <ListTodo size={18} />
           </span>
-          <span className="font-semibold text-(--text)">Team Tasks</span>
+          <span className="font-semibold text-[color:var(--text)]">Team Tasks</span>
         </Link>
 
         <nav className="flex items-center gap-2">
@@ -125,31 +133,30 @@ const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).
             Tasks
           </NavLink>
 
-          {/* ✅ NEW: Statistics */}
           <NavLink to="/statistics" className={navLinkClass}>
             <BarChart3 size={16} />
             Statistics
           </NavLink>
 
-       <Dropdown
-  menu={{ items: themeItems }}
-  trigger={["click"]}
-  placement="bottomRight"
-  classNames={{
-    root: cn(
-      dropdownOverlayClass,
-      isDark
-        ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110"
-        : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
-    ),
-  }}
->
+          <Dropdown
+            menu={{ items: themeItems, onClick: onThemeClick }}
+            trigger={["click"]}
+            placement="bottomRight"
+            classNames={{
+              root: cn(
+                dropdownOverlayClass,
+                isDark
+                  ? "[&_.ant-dropdown-menu-item:hover]:!brightness-110"
+                  : "[&_.ant-dropdown-menu-item:hover]:!brightness-95"
+              ),
+            }}
+          >
             <button
               type="button"
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)",
-                "hover:bg-(--panel-hover) active:scale-95"
+                "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
+                "hover:bg-[color:var(--panel-hover)] active:scale-95"
               )}
               aria-label="Change theme"
               title="Theme"
@@ -160,20 +167,20 @@ const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).
             </button>
           </Dropdown>
 
-          <div className="mx-2 hidden h-6 w-px bg-(--panel-border) sm:block" />
+          <div className="mx-2 hidden h-6 w-px bg-[color:var(--panel-border)] sm:block" />
 
           <Dropdown
-  menu={{ items: userItems }}
-  trigger={["click"]}
-  placement="bottomRight"
-  classNames={{ root: dropdownOverlayClass }}
->
+            menu={{ items: userItems }}
+            trigger={["click"]}
+            placement="bottomRight"
+            classNames={{ root: dropdownOverlayClass }}
+          >
             <button
               type="button"
               className={cn(
                 "inline-flex items-center justify-center rounded-lg p-2 transition-all",
-                "bg-(--panel) text-(--text) border border-(--panel-border) shadow-(--shadow-sm)",
-                "hover:bg-(--panel-hover) active:scale-95"
+                "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
+                "hover:bg-[color:var(--panel-hover)] active:scale-95"
               )}
               aria-label="User menu"
               title="Account"

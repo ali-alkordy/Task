@@ -1,5 +1,5 @@
 // src/pages/Auth/AuthPage.tsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { Palette } from "lucide-react";
-
+import FullPageLoader from './../../components/ui/FullPageLoader.tsx';
 import AnimatedWaves from "../../components/ui/AnimatedWaves";
 import PasswordInput from "../../components/ui/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +22,8 @@ const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
+
+
 
 const registerSchema = loginSchema
   .extend({
@@ -55,14 +57,27 @@ function getNiceError(err: unknown) {
     "Something went wrong"
   );
 }
-
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated, hydrated } = useAuth();
   const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    if (hydrated && isAuthenticated) {
+      const next = searchParams.get("next");
+      const from = (location.state as any)?.from;
+      const destination = next
+        ? decodeURIComponent(next)
+        : from?.pathname
+        ? from.pathname + (from.search ?? "")
+        : "/tasks";
+
+      navigate(destination, { replace: true });
+    }
+  }, [hydrated, isAuthenticated, navigate, searchParams, location.state]);
 
   const safeTheme: ThemeName =
     theme && Object.prototype.hasOwnProperty.call(THEME_META, theme)
@@ -189,7 +204,25 @@ export default function AuthPage() {
   const tabBtnBase = "rounded-lg px-3 py-2 text-sm font-semibold transition";
   const tabBtnActive = cn("bg-[color:var(--panel-hover)] text-[color:var(--text)] shadow-[var(--shadow-sm)]");
   const tabBtnInactive = cn("text-[color:var(--muted)] hover:text-[color:var(--text)]");
+  // ✅ show loader while restoring session
+  if (!hydrated) {
+    return (
+      <FullPageLoader
+        title="Checking session..."
+        subtitle="Please wait a moment"
+      />
+    );
+  }
 
+  // ✅ if logged in and user visits "/", show loader until redirect happens
+  if (isAuthenticated) {
+    return (
+      <FullPageLoader
+        title="Redirecting..."
+        subtitle="Taking you to your tasks"
+      />
+    );
+  }
   return (
     <div className="relative min-h-screen overflow-hidden bg-(--bg)">
       {/* Theme Picker Circle (Top-Left) */}

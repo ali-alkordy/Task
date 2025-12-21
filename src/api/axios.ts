@@ -1,5 +1,6 @@
 /* src/api/axios.ts */
 import axios, { type AxiosError, type AxiosInstance } from "axios";
+import Cookies from "js-cookie";
 
 type ApiError = {
   status: number;
@@ -13,11 +14,21 @@ type ApiError = {
 const KEY_ACCESS = "tasks:accessToken";
 
 function getAccessToken(): string | null {
-  return localStorage.getItem(KEY_ACCESS);
+  return Cookies.get(KEY_ACCESS) ?? null;
+}
+
+// ✅ optional helper (use it from AuthService when you set the token)
+export function setAccessToken(token: string) {
+  Cookies.set(KEY_ACCESS, token, {
+    path: "/",
+    sameSite: "lax",
+    secure: window.location.protocol === "https:",
+    // expires: 7, // uncomment if you want it to persist 7 days (otherwise session cookie)
+  });
 }
 
 function clearAccessToken() {
-  localStorage.removeItem(KEY_ACCESS);
+  Cookies.remove(KEY_ACCESS, { path: "/" });
 }
 
 function normalizeError(err: unknown): ApiError {
@@ -47,15 +58,31 @@ function isAuthUrl(url?: string) {
   );
 }
 
-function redirectToLogin() {
-  const next = encodeURIComponent(window.location.pathname + window.location.search);
-  window.location.href = `/login?next=${next}`;
+function getNextParam() {
+  return encodeURIComponent(window.location.pathname + window.location.search);
 }
 
-async function forceLogoutAndRedirect() {
+function isAlreadyOn(routePrefix: string) {
+  return window.location.pathname === routePrefix;
+}
+
+function redirectToUnauthorized() {
+  if (isAlreadyOn("/unauthorized")) return;
+  const next = getNextParam();
+  window.location.href = `/unauthorized?next=${next}`;
+}
+
+function redirectToForbidden() {
+  if (isAlreadyOn("/forbidden")) return;
+  const next = getNextParam();
+  window.location.href = `/forbidden?next=${next}`;
+}
+
+
+async function forceLogoutAndRedirectUnauthorized() {
   // ✅ clear our API JWT
   clearAccessToken();
-  redirectToLogin();
+  redirectToUnauthorized();
 }
 
 /**
@@ -101,14 +128,19 @@ export function setupInterceptors(api: AxiosInstance) {
       const original = ax.config as any;
       if (!original) return Promise.reject(normalizeError(err));
 
-      // ✅ if unauthorized on protected endpoint => clear token + redirect
+      // ✅ 401 on protected endpoint => clear token + go to Unauthorized page
       if (status === 401 && !original.__handled401 && !isAuthUrl(original.url)) {
         original.__handled401 = true;
-        await forceLogoutAndRedirect();
+        await forceLogoutAndRedirectUnauthorized();
         return Promise.reject(normalizeError(err));
       }
 
-      if (status === 403) return Promise.reject(normalizeError(err));
+      // ✅ 403 => go to Forbidden page (no logout)
+      if (status === 403 && !original.__handled403) {
+        original.__handled403 = true;
+        redirectToForbidden();
+        return Promise.reject(normalizeError(err));
+      }
 
       return Promise.reject(normalizeError(err));
     }

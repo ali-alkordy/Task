@@ -172,3 +172,20 @@
 :root[data-theme="light"] {
   --modal-surface: #ffffff; /* ✅ solid white only for modal */
 }
+
+
+/* ✅ Force links (AntD) to follow our theme text colors */
+:root a,
+:root[data-theme] a,
+:root :where(.css-dev-only-do-not-override-1iph5z3) a,
+:root[data-theme] :where(.css-dev-only-do-not-override-1iph5z3) a {
+  color: var(--text) !important;
+}
+
+/* ✅ Hover state */
+:root a:hover,
+:root[data-theme] a:hover,
+:root :where(.css-dev-only-do-not-override-1iph5z3) a:hover,
+:root[data-theme] :where(.css-dev-only-do-not-override-1iph5z3) a:hover {
+  color: var(--primary) !important;
+}
