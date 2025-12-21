@@ -1,6 +1,6 @@
 // src/components/layout/Navbar.tsx
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { LogOut, ListTodo, Palette, User, Settings, BarChart3 } from "lucide-react";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { LogOut, ListTodo, Palette, User, Settings, BarChart3, Menu } from "lucide-react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 
@@ -19,6 +19,7 @@ const THEME_META: Record<ThemeName, { label: string; dot: string }> = {
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
 
@@ -114,9 +115,39 @@ export default function Navbar() {
         "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]"
     );
 
+  // ✅ Mobile nav dropdown items
+  const navItems: MenuProps["items"] = [
+    {
+      key: "/tasks",
+      label: (
+        <div className="flex items-center gap-2 px-1 py-0.5">
+          <ListTodo size={16} />
+          <span className="text-[color:var(--text)]">Tasks</span>
+          {location.pathname.startsWith("/tasks") && (
+            <span className="ml-auto text-xs text-[color:var(--muted)]">Active</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "/statistics",
+      label: (
+        <div className="flex items-center gap-2 px-1 py-0.5">
+          <BarChart3 size={16} />
+          <span className="text-[color:var(--text)]">Statistics</span>
+          {location.pathname.startsWith("/statistics") && (
+            <span className="ml-auto text-xs text-[color:var(--muted)]">Active</span>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const onNavClick: MenuProps["onClick"] = ({ key }) => navigate(String(key));
+
   return (
     <header className="sticky top-0 z-50 border-b border-[color:var(--panel-border)] bg-[rgba(var(--bg-rgb),0.95)] backdrop-blur-sm shadow-[var(--shadow-sm)]">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-4">
         <Link
           to="/tasks"
           className="flex items-center gap-2 text-[color:var(--text)] transition-opacity hover:opacity-80"
@@ -124,19 +155,46 @@ export default function Navbar() {
           <span className="rounded-lg bg-[color:var(--panel)] p-2 border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]">
             <ListTodo size={18} />
           </span>
-          <span className="font-semibold text-[color:var(--text)]">Team Tasks</span>
+          {/* ✅ hide title on mobile */}
+          <span className="hidden sm:inline font-semibold text-[color:var(--text)]">Team Tasks</span>
         </Link>
 
-        <nav className="flex items-center gap-2">
-          <NavLink to="/tasks" className={navLinkClass}>
-            <ListTodo size={16} />
-            Tasks
-          </NavLink>
+        <nav className="flex items-center gap-1 sm:gap-2">
+          {/* ✅ Mobile: collapse links into dropdown */}
+          <div className="sm:hidden">
+            <Dropdown
+              menu={{ items: navItems, onClick: onNavClick }}
+              trigger={["click"]}
+              placement="bottomRight"
+              classNames={{ root: dropdownOverlayClass }}
+            >
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex items-center justify-center rounded-lg p-2 transition-all",
+                  "bg-[color:var(--panel)] text-[color:var(--text)] border border-[color:var(--panel-border)] shadow-[var(--shadow-sm)]",
+                  "hover:bg-[color:var(--panel-hover)] active:scale-95"
+                )}
+                aria-label="Navigation menu"
+                title="Menu"
+              >
+                <Menu size={18} />
+              </button>
+            </Dropdown>
+          </div>
 
-          <NavLink to="/statistics" className={navLinkClass}>
-            <BarChart3 size={16} />
-            Statistics
-          </NavLink>
+          {/* ✅ Desktop: inline links */}
+          <div className="hidden sm:flex items-center gap-2">
+            <NavLink to="/tasks" className={navLinkClass}>
+              <ListTodo size={16} />
+              Tasks
+            </NavLink>
+
+            <NavLink to="/statistics" className={navLinkClass}>
+              <BarChart3 size={16} />
+              Statistics
+            </NavLink>
+          </div>
 
           <Dropdown
             menu={{ items: themeItems, onClick: onThemeClick }}

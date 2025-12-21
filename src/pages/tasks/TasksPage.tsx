@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Key } from "react";
 
-import { Button, DatePicker, Input, Select, Space, Table, Tag, Tooltip } from "antd";
+import { Button, DatePicker, Input, Select, Space, Table, Tag, Tooltip, Grid } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -32,6 +32,10 @@ type PagedResult<T> = {
 export default function TasksPage() {
   const { user, hydrated } = useAuth();
   const qc = useQueryClient();
+
+  // ✅ detect mobile (AntD breakpoints)
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.sm;
 
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -179,76 +183,79 @@ export default function TasksPage() {
   // ✅ Helper to bind AntD UI sort indicators to our state
   const colSortOrder = (field: SortField) => (sortField === field ? sortOrder : null);
 
-  const columns: ColumnsType<Task> = [
-    {
-      title: "Title",
-      dataIndex: "title",
-      sorter: true,
-      sortOrder: colSortOrder("title"),
-      render: (v: string, row) => (
-        <div className="min-w-55">
-          <div className="font-semibold text-(--text)">{v}</div>
-          {row.description ? (
-            <div className="mt-1 line-clamp-1 text-xs text-(--muted)">{row.description}</div>
-          ) : (
-            <div className="mt-1 text-xs text-(--muted)">No description</div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      sorter: true,
-      sortOrder: colSortOrder("status"),
-      width: 140,
-      render: (v: TaskStatus) => statusTag(v),
-    },
-    {
-      title: "Priority",
-      dataIndex: "priority",
-      sorter: true,
-      sortOrder: colSortOrder("priority"),
-      width: 140,
-      render: (v: TaskPriority) => priorityTag(v),
-    },
-    {
-      title: "Due",
-      dataIndex: "dueDate",
-      sorter: true,
-      sortOrder: colSortOrder("dueDate"),
-      width: 160,
-      render: (v?: string | null) => (v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-(--muted)">—</span>),
-    },
-    {
-      title: "Updated",
-      dataIndex: "updatedAt",
-      sorter: true,
-      sortOrder: colSortOrder("updatedAt"),
-      width: 180,
-      render: (v: any) => <span className="text-(--muted)">{v ? dayjs(v).format("YYYY-MM-DD HH:mm") : "—"}</span>,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 170,
-      render: (_, row) => (
-        <Space>
-          <Tooltip title="View">
-            <Button size="small" onClick={() => openView(row.id)} icon={<Eye size={16} />} />
-          </Tooltip>
+  const columns = useMemo<ColumnsType<Task>>(
+    () => [
+      {
+        title: "Title",
+        dataIndex: "title",
+        sorter: true,
+        sortOrder: colSortOrder("title"),
+        render: (v: string, row) => (
+          <div className="min-w-0">
+            <div className="font-semibold text-(--text) truncate">{v}</div>
+            {row.description ? (
+              <div className="mt-1 line-clamp-1 text-xs text-(--muted)">{row.description}</div>
+            ) : (
+              <div className="mt-1 text-xs text-(--muted)">No description</div>
+            )}
+          </div>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        sorter: true,
+        sortOrder: colSortOrder("status"),
+        width: 140,
+        render: (v: TaskStatus) => statusTag(v),
+      },
+      {
+        title: "Priority",
+        dataIndex: "priority",
+        sorter: true,
+        sortOrder: colSortOrder("priority"),
+        width: 140,
+        render: (v: TaskPriority) => priorityTag(v),
+      },
+      {
+        title: "Due",
+        dataIndex: "dueDate",
+        sorter: true,
+        sortOrder: colSortOrder("dueDate"),
+        width: 160,
+        render: (v?: string | null) => (v ? dayjs(v).format("YYYY-MM-DD") : <span className="text-(--muted)">—</span>),
+      },
+      {
+        title: "Updated",
+        dataIndex: "updatedAt",
+        sorter: true,
+        sortOrder: colSortOrder("updatedAt"),
+        width: 180,
+        render: (v: any) => <span className="text-(--muted)">{v ? dayjs(v).format("YYYY-MM-DD HH:mm") : "—"}</span>,
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        width: isMobile ? 140 : 170,
+        render: (_, row) => (
+          <Space>
+            <Tooltip title="View">
+              <Button size="small" onClick={() => openView(row.id)} icon={<Eye size={16} />} />
+            </Tooltip>
 
-          <Tooltip title="Edit">
-            <Button size="small" onClick={() => openEdit(row.id)} icon={<Pencil size={16} />} />
-          </Tooltip>
+            <Tooltip title="Edit">
+              <Button size="small" onClick={() => openEdit(row.id)} icon={<Pencil size={16} />} />
+            </Tooltip>
 
-          <Tooltip title="Delete">
-            <Button size="small" danger onClick={() => openDelete(row.id)} icon={<Trash2 size={16} />} />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
+            <Tooltip title="Delete">
+              <Button size="small" danger onClick={() => openDelete(row.id)} icon={<Trash2 size={16} />} />
+            </Tooltip>
+          </Space>
+        ),
+      },
+    ],
+    [sortField, sortOrder, isMobile]
+  );
 
   const onTableChange = (p: TablePaginationConfig, _filters: any, sorter: SorterResult<Task> | SorterResult<Task>[]) => {
     // ✅ pagination (server-side)
@@ -262,12 +269,11 @@ export default function TasksPage() {
     if (s?.field && s?.order) {
       setSortField(s.field as SortField);
       setSortOrder(s.order as any);
-      setPage(1); // optional: jump to first page when sorting changes
+      setPage(1);
       return;
     }
 
-    // When user clears sort (clicking until no order): s.order becomes undefined
-    // Keep server deterministic: fallback to default sort
+    // When user clears sort
     if (s?.field && !s.order) {
       setSortField(DEFAULT_SORT_FIELD);
       setSortOrder(DEFAULT_SORT_ORDER);
@@ -286,12 +292,14 @@ export default function TasksPage() {
           <p className="text-sm text-(--muted)">Manage your tasks with search, filters, sorting and bulk actions.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="primary" onClick={() => setCreateOpen(true)}>
+        {/* ✅ buttons stack on mobile */}
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Button className="w-full sm:w-auto" type="primary" onClick={() => setCreateOpen(true)}>
             + New Task
           </Button>
 
           <Button
+            className="w-full sm:w-auto"
             disabled={selectedRowKeys.length === 0}
             onClick={() => bulkDoneMut.mutate(selectedRowKeys as string[])}
             icon={<CheckCircle2 size={16} />}
@@ -302,71 +310,83 @@ export default function TasksPage() {
       </div>
 
       <div className="rounded-xl border border-(--panel-border) bg-(--panel) p-3">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            <Input
-              allowClear
-              placeholder="Search title/description..."
-              value={searchInput}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSearchInput(v);
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          {/* ✅ responsive grid for filters */}
+          <div className="grid w-full flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="lg:col-span-2">
+              <Input
+                allowClear
+                placeholder="Search title/description..."
+                value={searchInput}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSearchInput(v);
 
-                // ✅ if user clears using X -> clear applied search too
-                if (!v) {
-                  setPage(1);
-                  setSearch("");
-                }
-              }}
-              onPressEnter={applySearch}
-              className="max-w-50"
-            />
+                  // ✅ if user clears using X -> clear applied search too
+                  if (!v) {
+                    setPage(1);
+                    setSearch("");
+                  }
+                }}
+                onPressEnter={applySearch}
+                className="w-full"
+              />
+            </div>
 
-            <Select
-              value={statusInput}
-              onChange={(v) => setStatusInput(v)}
-              style={{ width: 160 }}
-              options={[
-                { value: "All", label: "All Status" },
-                { value: "Todo", label: "Todo" },
-                { value: "InProgress", label: "In Progress" },
-                { value: "Done", label: "Done" },
-              ]}
-            />
+            <div className="lg:col-span-1">
+              <Select
+                value={statusInput}
+                onChange={(v) => setStatusInput(v)}
+                style={{ width: "100%" }}
+                options={[
+                  { value: "All", label: "All Status" },
+                  { value: "Todo", label: "Todo" },
+                  { value: "InProgress", label: "In Progress" },
+                  { value: "Done", label: "Done" },
+                ]}
+              />
+            </div>
 
-            <Select
-              value={priorityInput}
-              onChange={(v) => setPriorityInput(v)}
-              style={{ width: 170 }}
-              options={[
-                { value: "All", label: "All Priority" },
-                { value: "Low", label: "Low" },
-                { value: "Medium", label: "Medium" },
-                { value: "High", label: "High" },
-              ]}
-            />
+            <div className="lg:col-span-1">
+              <Select
+                value={priorityInput}
+                onChange={(v) => setPriorityInput(v)}
+                style={{ width: "100%" }}
+                options={[
+                  { value: "All", label: "All Priority" },
+                  { value: "Low", label: "Low" },
+                  { value: "Medium", label: "Medium" },
+                  { value: "High", label: "High" },
+                ]}
+              />
+            </div>
 
-            <RangePicker
-              value={[
-                dueRangeInput[0] ? dayjs(dueRangeInput[0]) : null,
-                dueRangeInput[1] ? dayjs(dueRangeInput[1]) : null,
-              ]}
-              onChange={(vals) => {
-                if (!vals || vals.length !== 2) return setDueRangeInput([null, null]);
-                setDueRangeInput([
-                  vals[0] ? vals[0].startOf("day").toISOString() : null,
-                  vals[1] ? vals[1].endOf("day").toISOString() : null,
-                ]);
-              }}
-            />
+            <div className="sm:col-span-2 lg:col-span-2">
+              <RangePicker
+                className="w-full"
+                value={[
+                  dueRangeInput[0] ? dayjs(dueRangeInput[0]) : null,
+                  dueRangeInput[1] ? dayjs(dueRangeInput[1]) : null,
+                ]}
+                onChange={(vals) => {
+                  if (!vals || vals.length !== 2) return setDueRangeInput([null, null]);
+                  setDueRangeInput([
+                    vals[0] ? vals[0].startOf("day").toISOString() : null,
+                    vals[1] ? vals[1].endOf("day").toISOString() : null,
+                  ]);
+                }}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button type="primary" onClick={applySearch}>
+          {/* ✅ buttons full width on mobile */}
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end lg:w-auto">
+            <Button className="w-full sm:w-auto" type="primary" onClick={applySearch}>
               Search
             </Button>
 
             <Button
+              className="w-full sm:w-auto"
               onClick={() => {
                 setSearchInput("");
                 setSearch("");
@@ -395,22 +415,27 @@ export default function TasksPage() {
       <div className="rounded-xl border border-(--panel-border) bg-(--panel) p-2">
         <Table<Task>
           rowKey="id"
+          size={isMobile ? "small" : "middle"}
+          scroll={{ x: "max-content" }} // ✅ allow horizontal scroll on small screens
           loading={isLoading || isFetching}
           columns={columns}
           dataSource={items}
           onChange={onTableChange}
-        pagination={{
-  current: page,
-  pageSize,
-  total,
-  showSizeChanger: false,
-  placement: ["bottomCenter"],
-  showTotal: (t, range) => (
-    <span className="text-(--muted) text-sm">
-      {range[0]}-{range[1]} of {t}
-    </span>
-  ),
-}}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: false,
+            placement: ["bottomCenter"],
+            simple: isMobile, // ✅ mobile-friendly pagination
+            showTotal: isMobile
+              ? undefined
+              : (t, range) => (
+                  <span className="text-(--muted) text-sm">
+                    {range[0]}-{range[1]} of {t}
+                  </span>
+                ),
+          }}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
           locale={{
             emptyText: (
