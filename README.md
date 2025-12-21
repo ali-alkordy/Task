@@ -28,14 +28,7 @@ npm install
 
 #note am giving here the apikey and the url cause its only a task and public it only for u to test it 
 # Firebase Web App config (NO QUOTES)
-VITE_FUNCTIONS_BASE_URL=https://us-central1-tasks-5ef8c.cloudfunctions.net
 
-VITE_FB_API_KEY=AIzaSyDQygpmXhY9i1b6rsu6_g4BSAlDuRf-So4
-VITE_FB_AUTH_DOMAIN=tasks-5ef8c.firebaseapp.com
-VITE_FB_PROJECT_ID=tasks-5ef8c
-VITE_FB_STORAGE_BUCKET=tasks-5ef8c.appspot.com
-VITE_FB_MESSAGING_SENDER_ID=416015211860
-VITE_FB_APP_ID=1:416015211860:web:d9fd30026569cab28efcc1
 
 3) Run the project:
 

@@ -30,7 +30,7 @@ export default function Navbar() {
   const onLogout = async () => {
     await logout();
     toast.info("Signed out");
-    navigate("/auth", { replace: true });
+    navigate("/", { replace: true });
   };
 
   const themeItems: MenuProps["items"] = (Object.keys(THEME_META) as ThemeName[]).map((key) => ({
